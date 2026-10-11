@@ -1,44 +1,44 @@
-# 密码与 Face ID 认证接管
+# Toma de control para contraseña y Face ID
 
-仅在当前观察或工具明确显示认证阻塞时请求用户接管。App 密码页、解锁码、验证码、Face ID / Touch ID 确认和登录续期都由用户在手机上完成。空控件树或黑色截图本身不足以证明正在认证；先根据当前提示区分锁屏、镜像占用、自绘内容与通道故障。
+Pide al usuario que tome el control solo cuando la observación actual o la herramienta muestren con claridad un bloqueo de autenticación. La página de contraseña de la app, el código de desbloqueo, el código de verificación, la confirmación de Face ID / Touch ID y la renovación del inicio de sesión los completa el usuario en el teléfono. Un árbol de elementos vacío o una captura negra no bastan, por sí solos, para demostrar que hay una autenticación en curso. Distingue antes, según el aviso actual, la pantalla bloqueada, la ocupación por la duplicación de pantalla, el contenido dibujado por la app y un fallo del canal.
 
-## 先区分阻塞层
+## Distingue primero la capa del bloqueo
 
-| 当前证据 | 处理 |
+| Evidencia actual | Qué hacer |
 | --- | --- |
-| App 的登录 / 密码 / 生物识别提示 | 请求用户在该 App 内完成认证；暂停手机调用，随后重新观察目标页。READY 不能证明 App 已登录。 |
-| `phone_locked` 或实际手机锁屏 | 请用户亲自解锁 iPhone、保持唤醒，完成后重验 READY 并观察目标 App。 |
-| `local.pid.0` / `pua_foreground_unavailable` / XCTest Code 41 | 依照 setup skill 恢复 PUA 通道；不能当作 App 密码错误。只有系统确实要求信任或认证时才让用户完成对应操作。 |
+| Aviso de inicio de sesión / contraseña / biometría de la app | Pide al usuario que complete la autenticación dentro de esa app. Pausa las llamadas al teléfono y, después, vuelve a observar la página de destino. READY no demuestra que la app haya iniciado sesión. |
+| `phone_locked` o el iPhone realmente bloqueado | Pide al usuario que desbloquee el iPhone en persona y lo mantenga despierto; al terminar, vuelve a comprobar READY y observa la app de destino. |
+| `local.pid.0` / `pua_foreground_unavailable` / XCTest Code 41 | Recupera el canal PUA según la skill de setup. No lo trates como una contraseña de app incorrecta. Solo si el sistema pide de verdad confianza o autenticación, deja que el usuario complete esa operación. |
 
-## 交接时说明什么
+## Qué explicar en el traspaso
 
-发现明确 App 认证阻塞时，先调用 `pua_screen(action="pause")`，停止 USB 预览采集并清空画面，再给用户接管提示。显式 App 认证暂停不会因为 READY / open 自动解除。`phone_locked` 已自动记录 `device_locked` 并暂停，无需再显式 pause；实际解锁通知后，成功 READY 自动解除这一次锁屏暂停。用户自己点击刷新也是主动恢复预览的请求；刷新确认解锁后可解除点击时的 App / unknown 暂停，模型不能代点这个 App 专用按钮。新暂停发生在检查期间时不会被旧检查清除。旧版没有原因的暂停按 unknown 保留。接管期间不轮询帧、截图或用户输入。
+Cuando haya un bloqueo claro de autenticación de la app, llama primero a `pua_screen(action="pause")`, detén la captura de la vista previa USB y vacía la imagen; después muestra al usuario el aviso de toma de control. Una pausa explícita por autenticación de la app no se levanta sola por READY / open. `phone_locked` ya registra `device_locked` y pausa; no hace falta otro pause explícito. Tras el aviso real de desbloqueo, un READY correcto levanta solo esa pausa de pantalla bloqueada. Que el usuario pulse actualizar también es una petición activa de reanudar la vista previa. Si actualizar confirma el desbloqueo, puede levantar la pausa App / unknown que había en el momento del clic; el modelo no puede pulsar por el usuario ese botón reservado a la app. Una pausa nueva ocurrida durante la comprobación no la borra una comprobación antigua. Una pausa antigua sin motivo se conserva como unknown. Durante la toma de control no sondees fotogramas, capturas ni la entrada del usuario.
 
-必须调用宿主可用的提问功能提示用户接管，不只在普通消息或 final 中写“完成后回复继续”。提问说明实际 App、阻塞步骤、用户要完成的动作和随后继续的工作；第一个选项固定为 **「已完成继续」**，第二个可用「暂时无法完成」。问题只询问是否已完成手机上的操作，不收集密码、PIN 或验证码。
+Hay que llamar a la función de pregunta que el host tenga disponible para pedir la toma de control; no basta con escribir en un mensaje ordinario o en el final «responde continuar cuando termines». La pregunta indica la app real, el paso bloqueado, la acción que debe completar el usuario y el trabajo que seguirá después. La primera opción es siempre **«Listo, continuar»**; la segunda puede ser «No puedo terminar por ahora». La pregunta solo pide si ya se completó la operación en el teléfono; no recoge contraseña, PIN ni código de verificación.
 
-在 Codex Default 模式优先调用 `functions.request_user_input_async`，例如当前明确显示 Face ID 时：
+En el modo Default de Codex, llama de preferencia a `functions.request_user_input_async`. Por ejemplo, cuando se muestra con claridad Face ID:
 
 ```json
 {
   "questions": [{
-    "title": "当前 App 需要 Face ID 验证。请在 iPhone 上完成认证并停留在目标页面；完成后选择「已完成继续」，我会接着读取剩余明细。",
-    "options": ["已完成继续", "暂时无法完成"]
+    "title": "Esta app necesita verificación con Face ID. Completa la autenticación en el iPhone y quédate en la página de destino; cuando termines, elige «Listo, continuar» y seguiré leyendo el detalle restante.",
+    "options": ["Listo, continuar", "No puedo terminar por ahora"]
   }]
 }
 ```
 
-按当前证据替换 App、认证方式和后续工作；手机锁屏则要求用户亲自解锁并保持唤醒。宿主提供其他提问工具时按其实际 schema 调用，首个选项文字仍保持「已完成继续」；不要为调用提问功能切换模式。如果当前宿主确实没有可调用的提问功能，才使用文字提示并明确保留“等待用户认证”的未完成状态。
+Sustituye la app, el método de autenticación y el trabajo posterior según la evidencia actual. Si el teléfono está bloqueado, pide al usuario que lo desbloquee en persona y lo mantenga despierto. Si el host ofrece otra herramienta de pregunta, llámala según su schema real; el texto de la primera opción sigue siendo «Listo, continuar». No cambies de modo para poder llamar a la función de pregunta. Solo si el host actual no tiene de verdad una función de pregunta invocable, usa un aviso en texto y deja explícito el estado incompleto de «a la espera de la autenticación del usuario».
 
-异步提问会立即返回，这不是用户完成通知。保持问题待答，等待用户实际提交选项或明确回复；预选项、工具返回、等待时间经过和没有答复都不能当作完成。可以继续整理已经取得的结果或其他不依赖手机认证的工作，不能恢复手机调用；没有独立工作时等待用户输入，不用重复提问或手机轮询来消耗等待时间，不将整项任务标记完成。
+Una pregunta asíncrona vuelve de inmediato; eso no es el aviso de que el usuario terminó. Mantén la pregunta pendiente y espera a que el usuario envíe la opción o responda con claridad. Una opción preseleccionada, el retorno de la herramienta, el paso del tiempo de espera y la falta de respuesta no cuentan como terminado. Puedes seguir ordenando resultados ya obtenidos u otro trabajo que no dependa de la autenticación del teléfono; no puedes reanudar las llamadas al teléfono. Si no hay trabajo independiente, espera la entrada del usuario. No repitas la pregunta ni sondees el teléfono para consumir la espera, y no marques la tarea entera como terminada.
 
-只描述实际观察到的认证方式和页面，不猜测密码、PIN 或尝试绕过生物识别。不要要求用户将密码、解锁码或验证码发到聊天，也不要把凭据写进 `pua_type_text`、batch、日志、脚本或代码回退。即使密码框显示为普通 TextField，也由用户亲自输入；不只根据 SecureTextField 类型判断。
+Describe solo el método de autenticación y la página que observaste de verdad. No adivines la contraseña o el PIN ni intentes saltarte la biometría. No pidas al usuario que envíe al chat la contraseña, el código de desbloqueo o el código de verificación, ni escribas credenciales en `pua_type_text`, en un batch, en un registro, en un script o en el código de reserva. Aunque el campo de contraseña se muestre como un TextField normal, lo escribe el usuario en persona; no decidas solo por el tipo SecureTextField.
 
-保留当前 App / 页面、已取得内容、已执行步骤、未完成项与动作执行边界，不要求为保存进度先逐步验收，也不记录认证凭据。接管期间暂停该 iPhone 的操作、观察和截图；可以整理已有结果及进度，不能轮询用户输入。Face ID 失败、要求改用密码或验证码过期时，让用户按手机实际提示处理，不能连续触发验证或反复重启 App / PUA。
+Conserva la app / página actuales, el contenido ya obtenido, los pasos ya ejecutados, lo que falta y el límite de ejecución de la acción. No exijas una comprobación paso a paso previa para guardar el avance, y no registres credenciales de autenticación. Durante la toma de control, pausa las operaciones, la observación y las capturas de ese iPhone. Puedes ordenar los resultados y el avance ya obtenidos; no puedes sondear la entrada del usuario. Si Face ID falla, si pide cambiar a contraseña o si el código de verificación caduca, deja que el usuario siga el aviso real del teléfono. No dispares la verificación en serie ni reinicies una y otra vez la app o PUA.
 
-## 认证完成后继续
+## Continuar cuando la autenticación termina
 
-只有收到用户实际选择「已完成继续」或明确说明认证已经完成后才继续：App 认证或 unknown 暂停调用 `pua_screen(action="resume")`，设备锁屏则重验 READY，成功时自动恢复对应锁屏暂停；等待经过一段时间不等于完成或授权恢复。然后获取一次新观察，同时准备下一步并判断正确前台 App、认证提示及当前目标页。用户可能切换了 App、返回上层、滚动或顺带完成后续操作，因此不沿用接管前的坐标、observation_id 或元素 ID。根据新状态查找下一个语义目标；必要时用截图读取受保护页面内容，不为每步重新登录或单独验收。
+Continúa solo cuando el usuario elija de verdad «Listo, continuar» o diga con claridad que la autenticación ya terminó. Para una autenticación de app o una pausa unknown, llama a `pua_screen(action="resume")`; si el dispositivo estaba bloqueado, vuelve a comprobar READY y, si tiene éxito, se reanuda sola la pausa de ese bloqueo. Que haya pasado un rato de espera no es terminar ni autorizar la reanudación. Después obtén una observación nueva y, a la vez, prepara el paso siguiente y comprueba la app en primer plano, el aviso de autenticación y la página de destino actual. El usuario puede haber cambiado de app, vuelto atrás, desplazado o completado de paso una operación posterior, así que no reutilices las coordenadas, el observation_id ni el ID de elemento anteriores a la toma de control. Busca el siguiente objetivo semántico según el estado nuevo. Si hace falta, lee con una captura el contenido de una página protegida; no vuelvas a iniciar sesión ni hagas una comprobación aparte en cada paso.
 
-如果认证仍未完成，指出当前剩余步骤并等待，不执行被阻塞动作。如果用户选择「暂时无法完成」或说明暂时不能认证，说明已完成和剩余范围，保留接管检查点；用户取消时停止后续操作。若手机或通道失效，按 setup skill 恢复 READY，直接复用其中的新观察继续准备下一步；不能把 App 会话过期误当成服务需要重启。
+Si la autenticación sigue sin completarse, indica el paso que queda y espera; no ejecutes la acción bloqueada. Si el usuario elige «No puedo terminar por ahora» o dice que de momento no puede autenticarse, explica lo ya hecho y lo que queda, y conserva el punto de control de la toma de control. Si el usuario cancela, detén las operaciones posteriores. Si el teléfono o el canal fallan, recupera READY según la skill de setup y reutiliza directamente la observación nueva para preparar el paso siguiente. No confundas una sesión de app caducada con un servicio que haya que reiniciar.
 
-根据新状态继续剩余已授权工作。用户接管期间已完成的提交必须先回读结果，不能重复发送、支付、下单或重放整个输入 / 批次。认证完成不代表原任务完成；最终仍须核对全部 App、字段、覆盖范围和输出文件。
+Continúa el trabajo autorizado que quede según el estado nuevo. Un envío que el usuario ya completó durante la toma de control debe releerse antes de nada; no lo reenvíes, no pagues, no hagas otro pedido ni reejecutes toda la escritura o el lote. Que la autenticación haya terminado no significa que la tarea original haya terminado. Al final hay que contrastar todas las apps, los campos, el alcance cubierto y los archivos de salida.

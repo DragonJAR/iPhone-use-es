@@ -688,8 +688,8 @@ class ControllerTests(unittest.TestCase):
                 if condition == "occluded":
                     self.assertEqual(recovery["next_tool"], "pua_tap")
                     self.assertNotIn("next_arguments", recovery)
-                    self.assertIn("popup", recovery["next_step"])
-                    self.assertIn("NOT proof", recovery["next_step"])
+                    self.assertIn("emergente", recovery["next_step"])
+                    self.assertIn("NO prueba", recovery["next_step"])
                     self.assertEqual(error.details["tap_point"], {"x": 195, "y": 222})
                 else:
                     self.assertEqual(recovery["next_tool"], "pua_swipe")

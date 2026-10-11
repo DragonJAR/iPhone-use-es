@@ -42,19 +42,19 @@ def fail(code, message, **details):
 def stale(message,reason,scope="page",**details):
     fail("stale_observation",message,action_executed=False,reason=reason,freshness_scope=scope,
          recovery={"next_tool":"pua_observe","next_arguments":{"mode":"both"},"same_observation_retry":False,"replay_action":False,
-                   "next_step":"Inspect the current app and viewport before reusing coordinates. An observation ID is optional; changing text, numbers or screenshot pixels does not invalidate its app/viewport context."},**details)
+                   "next_step":"Revisa la app y el viewport actuales antes de reutilizar coordenadas. El ID de observación es opcional; que cambien textos, números o píxeles no invalida el contexto de app y viewport."},**details)
 
 
 def finite(value, name, low=0, high=10000):
     if isinstance(value, bool) or not isinstance(value, (int,float)) or not math.isfinite(value) or not low <= value <= high:
-        fail("invalid_argument", f"{name} must be a finite number in [{low}, {high}].")
+        fail("invalid_argument", f"{name} debe ser un número finito en [{low}, {high}].")
     return value
 
 
 def integer(value, name, low, high):
     finite(value, name, low, high)
     if not isinstance(value,int):
-        fail("invalid_argument", f"{name} must be an integer.")
+        fail("invalid_argument", f"{name} debe ser un entero.")
     return value
 
 
@@ -68,7 +68,7 @@ def action_result(function):
                 error.details.update(action_executed=True,action_complete=False)
                 if function.__name__=="swipe":
                     error.details.setdefault("attempts",self.accepted_actions-before)
-                error.details.setdefault("verification_required","At least one phone action was accepted before the error. Read actual state; do not automatically replay the operation.")
+                error.details.setdefault("verification_required","Se aceptó al menos una acción en el iPhone antes del error. Lee el estado real; no repitas la operación sola.")
             self.switch_to_coordinates(error,typing=function.__name__=="type_text")
             raise
     return wrapped
@@ -82,33 +82,33 @@ def predicate_literal(value):
 
 def predicate(selector):
     if not isinstance(selector,dict) or not selector or set(selector)-SELECTOR_FIELDS:
-        fail("invalid_selector", "Use label/label_contains/name/value/type/enabled, or a standalone PUA predicate; index picks one match.")
+        fail("invalid_selector", "Usa label, label_contains, name, value, type o enabled, o un predicate de PUA solo; index elige una coincidencia.")
     if "index" in selector:
         index=selector["index"]
         if isinstance(index,bool) or not isinstance(index,int) or not 0 <= index <= 199:
-            fail("invalid_selector","index must be an integer 0..199 choosing one match in tree order.")
+            fail("invalid_selector","index debe ser un entero de 0 a 199 que elige una coincidencia en orden del árbol.")
     criteria={key:value for key,value in selector.items() if key!="index"}
     if not criteria:
-        fail("invalid_selector","index only chooses among matches; add label, name, value, type or a predicate.")
+        fail("invalid_selector","index solo elige entre coincidencias; añade label, name, value, type o un predicate.")
     if "predicate" in criteria:
         if len(criteria)!=1:
-            fail("invalid_selector", "predicate cannot be mixed with exact fields.")
+            fail("invalid_selector", "predicate no puede mezclarse con campos exactos.")
         result = criteria["predicate"]
         if not isinstance(result,str) or not 1 <= len(result) <= 2000:
-            fail("invalid_selector", "predicate must have 1..2000 characters.")
+            fail("invalid_selector", "predicate debe tener de 1 a 2000 caracteres.")
         return result
     clauses=[]
     for key,value in criteria.items():
         if key=="enabled":
             if not isinstance(value,bool) and value not in ("true","false"):
-                fail("invalid_selector","enabled must be a boolean or the exact tree string true/false.")
+                fail("invalid_selector","enabled debe ser un booleano o la cadena exacta del árbol true/false.")
             literal="true" if value is True or value=="true" else "false"
             clauses.append("enabled == "+literal)
             continue
         if not isinstance(value,str) or not 1 <= len(value) <= 1000:
-            fail("invalid_selector", "Selector fields must be nonempty strings up to 1000 characters.")
+            fail("invalid_selector", "Los campos del selector deben ser cadenas no vacías de hasta 1000 caracteres.")
         if "\x00" in value:
-            fail("invalid_selector", "Exact selector strings cannot contain NUL; NSPredicate cannot match that character reliably.")
+            fail("invalid_selector", "Las cadenas exactas del selector no pueden contener NUL; NSPredicate no compara ese carácter con fiabilidad.")
         if key=="type" and not value.startswith("XCUIElementType"):
             value="XCUIElementType"+value
         escaped=predicate_literal(value)
@@ -201,7 +201,7 @@ class PhoneController:
             return dict(cached[1])
         v=self.client.session("GET", "/window/size")
         if not isinstance(v,dict):
-            fail("invalid_response", "Missing viewport.")
+            fail("invalid_response", "Falta el viewport.")
         finite(v.get("width"),"width",1,10000);finite(v.get("height"),"height",1,10000)
         if self.screen is not None and v!=self._screen_viewport:
             self._screen_viewport={"width":v["width"],"height":v["height"]}
@@ -226,7 +226,7 @@ class PhoneController:
         result=self.client.request("GET", "/wda/activeAppInfo",timeout=timeout).get("value") or {}
         app=result.get("bundleId")
         if not isinstance(app,str) or not app or app.startswith("local.pid."):
-            fail("pua_foreground_unavailable","PUA cannot resolve a running foreground application. This is a PUA/XCTest channel problem, not a selector or schema error.",foreground_app=app,recovery={"tool":"pua_ready","arguments":{"screenshot":False},"replay_action":False})
+            fail("pua_foreground_unavailable","PUA no puede resolver la app en primer plano. Es un problema del canal PUA/XCTest, no un error de selector ni de esquema.",foreground_app=app,recovery={"tool":"pua_ready","arguments":{"screenshot":False},"replay_action":False})
         return app
 
     def tree(self, include_invisible=False, expensive_visibility=False):
@@ -238,11 +238,11 @@ class PhoneController:
         path="/source?format=xml&excluded_attributes="+",".join(excluded)
         raw=self.client.session("GET",path)
         if not isinstance(raw,str):
-            fail("invalid_response", "PUA source is not XML text.")
+            fail("invalid_response", "La fuente de PUA no es texto XML.")
         try:
             tree=ET.fromstring(raw)
         except ET.ParseError as exc:
-            fail("invalid_response", f"PUA XML parse failed: {exc}.")
+            fail("invalid_response", f"No se pudo analizar el XML de PUA: {exc}.")
         root=tree.attrib if tree.attrib.get("type")=="XCUIElementTypeApplication" else {}
         # The page source root names the foreground app and spans the screen, so one read
         # usually answers what activeAppInfo and window/size would be asked separately.
@@ -287,7 +287,7 @@ class PhoneController:
 
     def observe(self,mode="tree",include_invisible=False,max_nodes=100,expensive_visibility=False):
         if mode not in ("tree","screenshot","both"):
-            fail("invalid_argument","mode must be tree, screenshot or both.")
+            fail("invalid_argument","mode debe ser tree, screenshot o both.")
         integer(max_nodes,"max_nodes",1,500)
         if mode=="screenshot":
             app=self.active_app()
@@ -304,7 +304,7 @@ class PhoneController:
             result.update({"nodes":[compact_node(node) for node in nodes[:max_nodes]],"total_nodes":len(nodes),"truncated":len(nodes)>max_nodes})
             if expensive_visibility:result["visibility_computed"]=True
             if not nodes:
-                result["warnings"]=["Empty accessibility tree: inspect a screenshot for lock, iPhone Mirroring conflict, loading, or custom-rendered content before acting."]
+                result["warnings"]=["Árbol de accesibilidad vacío: inspecciona una captura por si hay bloqueo, conflicto con iPhone Mirroring, carga o contenido dibujado a medida antes de actuar."]
         if mode in ("screenshot","both"):
             result["image"]=self.capture(viewport)
         return result
@@ -315,9 +315,9 @@ class PhoneController:
         try:
             data=base64.b64decode(encoded,validate=True)
         except (ValueError,TypeError) as exc:
-            fail("invalid_response", "Invalid screenshot encoding.")
+            fail("invalid_response", "Codificación de la captura no válida.")
         if not data.startswith(wda_image.PNG_SIGNATURE):
-            fail("invalid_response","PUA screenshot is not PNG.")
+            fail("invalid_response","La captura de PUA no es PNG.")
         artifacts=self.state_dir/"artifacts";artifacts.mkdir(mode=0o700,parents=True,exist_ok=True)
         dest=artifacts/(dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")+"-"+uuid.uuid4().hex[:8]+".png")
         dest.write_bytes(data);dest.chmod(0o600)
@@ -337,9 +337,9 @@ class PhoneController:
     def snapshot(self,observation_id):
         old=self.snapshots.get(observation_id)
         if not old:
-            stale("This observation is unknown to the current Runtime. Observe again or use current viewport coordinates.","unknown_observation")
+            stale("Esta observación no pertenece al Runtime actual. Observa otra vez o usa las coordenadas actuales del viewport.","unknown_observation")
         if self.active_app()!=old["app"]:
-            stale("The foreground app changed. Observe again.","foreground_changed")
+            stale("Cambió la app en primer plano. Observa otra vez.","foreground_changed")
         return old
 
     def guard(self,observation_id=None):
@@ -347,7 +347,7 @@ class PhoneController:
         # A supplied ID asks for a context check, so read the viewport again for it.
         viewport=self.viewport(0 if old else VIEWPORT_TTL)
         if old and viewport!=old["viewport"]:
-            stale("Orientation or viewport changed. Observe again before using the earlier coordinates.","viewport_changed")
+            stale("Cambiaron la orientación o el viewport. Observa otra vez antes de usar las coordenadas anteriores.","viewport_changed")
         return viewport
 
     def guard_region(self,observation_id,region):
@@ -359,7 +359,7 @@ class PhoneController:
         """Matches in tree order, with whatever attributes PUA returned inline."""
         found=self.client.session("POST","/elements",{"using":"predicate string","value":predicate(selector)}) or []
         if not isinstance(found,list):
-            fail("invalid_response","PUA elements result is not a list.")
+            fail("invalid_response","El resultado de elementos de PUA no es una lista.")
         index=selector.get("index")
         inline=all(isinstance(item,dict) and isinstance(item.get("rect"),dict) for item in found)
         if index is not None:
@@ -383,7 +383,7 @@ class PhoneController:
             element["rect"]=self.client.session("GET","/element/"+quote(element["element_id"],safe="")+"/rect")
         rect=element["rect"]
         if not isinstance(rect,dict) or not all(isinstance(rect.get(key),(int,float)) and not isinstance(rect.get(key),bool) and math.isfinite(rect[key]) for key in ("x","y","width","height")):
-            fail("invalid_response","PUA element rect is not numeric.")
+            fail("invalid_response","El rect del elemento de PUA no es numérico.")
         return rect
 
     def element_hittable(self,element):
@@ -414,19 +414,19 @@ class PhoneController:
             elif "image" not in observed:observed["image"]=self.capture(observed["viewport"])
         except WDAError as failure:error.details["observation_error"]={"code":failure.code,"message":str(failure)}
         if error.code=="offscreen_target":
-            tool,step="pua_swipe","Inspect the attached screenshot FIRST. The match lies outside the viewport; check the actual list, direction and overlays before deciding whether to swipe toward it. Then use the resulting screenshot to locate it."
+            tool,step="pua_swipe","Inspecciona primero la captura adjunta. La coincidencia está fuera del viewport; revisa la lista real, la dirección y las capas antes de decidir si deslizas hacia ella. Luego localízala en la captura resultante."
         elif error.code=="occluded_target":
-            tool,step="pua_tap","Inspect the attached screenshot FIRST. A popup may cover the target; dismiss its visible close/cancel control before tapping the field or target. tap_point is the background element's location, NOT proof it can be clicked."
+            tool,step="pua_tap","Inspecciona primero la captura adjunta. Una ventana emergente puede cubrir el objetivo; cierra su control visible de cerrar o cancelar antes de pulsar el campo o el objetivo. tap_point es la ubicación del elemento de fondo y NO prueba que se pueda pulsar."
         elif error.code in ("search_exhausted","no_scroll_progress","scroll_context_changed","modal_requires_region","blocked_scroll_region"):
-            tool,step=None,"Inspect the attached screenshot FIRST for the last row/end marker, unchanged content, wrong region, fixed header or popup. Decide whether another swipe is warranted and choose the visible target/region/direction; do not automatically repeat scrolling or increase its budget. No progress alone does not prove an empty or complete list."
+            tool,step=None,"Inspecciona primero la captura adjunta: última fila, marca de fin, contenido sin cambios, región incorrecta, cabecera fija o ventana emergente. Decide si otro deslizamiento procede y elige el objetivo, la región o la dirección visibles. No repitas el desplazamiento ni subas su límite. La falta de avance no demuestra una lista vacía o completa."
         elif error.code in ("postcondition_failed","input_mismatch"):
-            tool,step=None,"Inspect the attached screenshot FIRST to establish the actual page, field text or submission result. Continue only the missing work; do not blindly repeat the previous click, input or submission."
+            tool,step=None,"Inspecciona primero la captura adjunta para ver la página real, el texto del campo o el resultado del envío. Continúa solo el trabajo pendiente; no repitas a ciegas el toque, la escritura o el envío anteriores."
         elif typing:
-            tool,step="pua_tap","Inspect the attached screenshot FIRST for a popup or wrong page. Tap the visible editable field with pua_tap x/y, then call pua_type_text with text and no selector. If a prior tap failed to focus the field, do not repeat the same point blindly; choose a new target from the current screenshot."
+            tool,step="pua_tap","Inspecciona primero la captura adjunta por si hay una ventana emergente o la página no es la esperada. Pulsa el campo editable visible con pua_tap x/y y luego llama a pua_type_text con text y sin selector. Si un toque anterior no enfocó el campo, no repitas el mismo punto a ciegas; elige un objetivo nuevo en la captura actual."
         else:
-            tool,step="pua_tap","Inspect the attached screenshot FIRST, then tap the visible target with pua_tap x/y; a returned tap or tap_point is already in iPhone points."
+            tool,step="pua_tap","Inspecciona primero la captura adjunta y pulsa el objetivo visible con pua_tap x/y. Un tap o tap_point devuelto ya está en puntos del iPhone."
         recovery={**error.details.get("recovery",{}),"use":"coordinates" if error.code in SELECTOR_FAILURES else "screenshot","visual_check_required":True,"replay_action":False,
-                  "next_step":step+" Image pixels x image.pixel_to_point give iPhone points. Inspect the image content, not its base64 text; through functions.exec forward image blocks with image(block), or open observation.image.path with view_image. If no screenshot is available, take one pua_observe(mode=screenshot) before acting. Do not try other selector spellings or read the tree again first."}
+                  "next_step":step+" Los píxeles de la imagen por image.pixel_to_point dan puntos del iPhone. Inspecciona el contenido de la imagen, no su texto base64; con functions.exec reenvía los bloques de imagen con image(block), o abre observation.image.path con view_image. Si no hay captura, toma una con pua_observe(mode=screenshot) antes de actuar. No pruebes otras formas del selector ni vuelvas a leer el árbol primero."}
         recovery.pop("next_tool",None);recovery.pop("next_arguments",None)
         if tool:recovery["next_tool"]=tool
         if "image" not in error.details.get("observation",{}):
@@ -446,10 +446,10 @@ class PhoneController:
             rect=self.element_rect(element)
             return rect["width"]>0 and rect["height"]>0 and 0<=rect["x"]+rect["width"]/2<viewport["width"] and 0<=rect["y"]+rect["height"]/2<viewport["height"]
         matches,complete=found["matches"],found["complete"]
-        recovery={"replay_action":False,"next_step":"Tap the intended candidate's tap point with x/y, or repeat the call with selector.index. Nothing was sent to the phone."}
+        recovery={"replay_action":False,"next_step":"Pulsa el punto tap del candidato previsto con x/y, o repite la llamada con selector.index. No se envió nada al iPhone."}
         candidates=[element for element in found["elements"] if on_screen(element)]
         if not candidates and complete:
-            fail("offscreen_target","Several elements match, but none is inside the viewport. Scroll the intended one into view and observe again.",action_executed=False,matches=matches,
+            fail("offscreen_target","Coinciden varios elementos, pero ninguno está dentro del viewport. Desplaza el previsto a la vista y observa otra vez.",action_executed=False,matches=matches,
                  candidates=[self.describe(element) for element in found["elements"][:CANDIDATE_LIMIT]],viewport=viewport,recovery={"next_tool":"pua_observe","next_arguments":{"mode":"both"},"replay_action":False})
         if editable:
             fields=[element for element in candidates if element.get("type") in EDITABLE]
@@ -467,10 +467,10 @@ class PhoneController:
                 if self.element_hittable(element):
                     self.last_target={"matches":matches,"chosen":"innermost_of_nested_matches","index":element["index"]}
                     return element
-            fail("occluded_target","The matching elements are nested at one place and none is reported hittable; no tap was sent. If the screen shows the target uncovered, tap its tap point with x/y; if something covers it, deal with that first.",action_executed=False,matches=matches,
+            fail("occluded_target","Los elementos coincidentes están anidados en un punto y ninguno se informa como pulsable; no se envió ningún toque. Si la pantalla muestra el objetivo libre, pulsa su tap point con x/y; si algo lo cubre, resuélvelo antes.",action_executed=False,matches=matches,
                  candidates=[self.describe(element) for element in ordered],viewport=viewport,recovery={"use":"coordinates","next_tool":"pua_tap","replay_action":False})
         for element in listed:self.element_hittable(element)
-        fail("ambiguous_target","Several separate elements match. Tap the intended candidate's tap point with x/y, or choose it by selector.index.",action_executed=False,matches=matches,
+        fail("ambiguous_target","Coinciden varios elementos separados. Pulsa el tap point del candidato previsto con x/y, o elígelo con selector.index.",action_executed=False,matches=matches,
              candidates=[self.describe(element) for element in listed],candidates_truncated=not complete or len(listed)<len(candidates),recovery=recovery)
 
     def resolve(self,selector,editable=False,found=None):
@@ -478,22 +478,22 @@ class PhoneController:
         result=found if found is not None else self.query(selector)
         self.last_target=None
         if result["matches"]==0:
-            fail("no_such_element","No element matches this selector. Locate the target on the screen and act by coordinates instead of trying other selector spellings.",action_executed=False)
+            fail("no_such_element","Ningún elemento coincide con este selector. Localiza el objetivo en la pantalla y actúa por coordenadas, sin probar otras formas del selector.",action_executed=False)
         if not result["elements"]:
-            fail("no_such_element","selector.index is beyond the current matches. Read fresh state and choose again.",action_executed=False,matches=result["matches"])
+            fail("no_such_element","selector.index supera las coincidencias actuales. Lee el estado reciente y elige otra vez.",action_executed=False,matches=result["matches"])
         viewport=self.viewport(VIEWPORT_TTL)
         element=result["elements"][0] if result["matches"]==1 or selector.get("index") is not None else self.choose(result,viewport,editable)
         rect=self.element_rect(element)
         cx=rect["x"]+rect["width"]/2;cy=rect["y"]+rect["height"]/2
         if rect["width"]<=0 or rect["height"]<=0 or not (0<=cx<viewport["width"] and 0<=cy<viewport["height"]):
-            fail("offscreen_target","Target center is outside the viewport. Scroll the actual list into view, observe again and re-find the target; a stopped batch has not completed its failed step.",action_executed=False,target_rect=rect,viewport=viewport,recovery={"next_tool":"pua_observe","next_arguments":{"mode":"both"},"replay_action":False})
+            fail("offscreen_target","El centro del objetivo está fuera del viewport. Desplaza la lista real a la vista, observa otra vez y busca el objetivo de nuevo. Un batch detenido no ha completado el paso fallido.",action_executed=False,target_rect=rect,viewport=viewport,recovery={"next_tool":"pua_observe","next_arguments":{"mode":"both"},"replay_action":False})
         path="/element/"+quote(element["element_id"],safe="")
         if not self.element_hittable(element):
-            fail("occluded_target","Target was found but is not reported hittable; no tap was sent, so nothing on the phone changed. If the screen shows the target uncovered, tap tap_point with x/y; if an overlay, picker or fixed header covers it, deal with that first.",action_executed=False,target_rect=rect,tap_point={"x":round(cx),"y":round(cy)},viewport=viewport,recovery={"use":"coordinates","next_tool":"pua_tap","next_arguments":{"x":round(cx),"y":round(cy)},"replay_action":False})
+            fail("occluded_target","Se encontró el objetivo, pero no se informa como pulsable; no se envió ningún toque, así que el iPhone no cambió. Si la pantalla lo muestra libre, pulsa tap_point con x/y; si lo cubren una capa, un selector o una cabecera fija, resuélvelo antes.",action_executed=False,target_rect=rect,tap_point={"x":round(cx),"y":round(cy)},viewport=viewport,recovery={"use":"coordinates","next_tool":"pua_tap","next_arguments":{"x":round(cx),"y":round(cy)},"replay_action":False})
         if editable:
             if "type" not in element:element["type"]=self.client.session("GET",path+"/attribute/type")
             if element["type"] not in EDITABLE:
-                fail("not_editable","Select a readable text/search field or text view. Ask the user to handle secure fields.",secure_field=element["type"]=="XCUIElementTypeSecureTextField")
+                fail("not_editable","Elige un campo de texto o de búsqueda, o una vista de texto, que se pueda leer. Pide a la persona que atienda los campos seguros.",secure_field=element["type"]=="XCUIElementTypeSecureTextField")
         if self.screen is not None:
             if len(self._screen_targets)>=32:self._screen_targets.clear()
             self._screen_targets[path]={"x":cx,"y":cy}
@@ -514,9 +514,9 @@ class PhoneController:
             remaining=max(0.05,deadline-time.monotonic()) if timeout_seconds else 0.5
             found=self.client.session("POST","/elements",{"using":"predicate string","value":pred},timeout=min(remaining,2)) or []
             if len(found)>selector.get("index",0):
-                return {"verified":True,"matches":len(found),"polls":attempts,"criterion":"selector exists; presence alone does not prove business success"}
+                return {"verified":True,"matches":len(found),"polls":attempts,"criterion":"el selector existe; la presencia sola no prueba el éxito del negocio"}
             if time.monotonic()>=deadline:
-                fail("postcondition_failed","Expected target did not appear within the wait budget.",polls=attempts)
+                fail("postcondition_failed","El objetivo esperado no apareció dentro del tiempo de espera.",polls=attempts)
             time.sleep(min(0.25,max(0,deadline-time.monotonic())))
 
     def cool_off(self,seconds):
@@ -549,11 +549,11 @@ class PhoneController:
     @action_result
     def tap(self,selector=None,x=None,y=None,observation_id=None,expect=None,observe="none"):
         if observe not in ("none","tree","screenshot","both"):
-            fail("invalid_argument","Invalid observation mode.")
+            fail("invalid_argument","Modo de observación no válido.")
         if expect:predicate(expect)
         if selector is not None:
             if x is not None or y is not None:
-                fail("invalid_argument","Choose selector or coordinates.")
+                fail("invalid_argument","Elige selector o coordenadas.")
             try:path=self.target(selector)
             except WDAError as error:
                 self.switch_to_coordinates(error);raise
@@ -563,7 +563,7 @@ class PhoneController:
             finite(x,"x");finite(y,"y")
             viewport=self.guard(observation_id)
             if x>=viewport["width"] or y>=viewport["height"]:
-                fail("invalid_argument","Coordinates are outside the iPhone viewport.")
+                fail("invalid_argument","Las coordenadas están fuera del viewport del iPhone.")
             chosen=None
             self.post("/wda/tap",{"x":x,"y":y})
         result=self.after(expect,observe)
@@ -573,9 +573,9 @@ class PhoneController:
     @action_result
     def launch_app(self,bundle_id,expect=None,observe="none",verify=False):
         if not isinstance(bundle_id,str) or not re.fullmatch(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+",bundle_id):
-            fail("invalid_argument","Use the app's verified bundle ID.")
-        if observe not in ("none","tree","screenshot","both"):fail("invalid_argument","Invalid observe mode.")
-        if not isinstance(verify,bool):fail("invalid_argument","verify must be boolean.")
+            fail("invalid_argument","Usa el bundle ID verificado de la app.")
+        if observe not in ("none","tree","screenshot","both"):fail("invalid_argument","Modo observe no válido.")
+        if not isinstance(verify,bool):fail("invalid_argument","verify debe ser booleano.")
         if expect:predicate(expect)
         self._viewport_cache=None
         self.post("/wda/apps/activate",{"bundleId":bundle_id},timeout=45)
@@ -587,20 +587,20 @@ class PhoneController:
         while True:
             remaining=deadline-time.monotonic()
             if remaining<=0:
-                fail("postcondition_failed","Activation was accepted, but the requested app did not become foreground within five seconds. Inspect loading, login or system prompts before continuing; do not replay activation automatically.",requested_app=bundle_id,foreground_app=app,foreground_verified=False,recovery={"next_tool":"pua_observe","next_arguments":{"mode":"both"},"replay_action":False})
+                fail("postcondition_failed","Se aceptó la activación, pero la app pedida no pasó a primer plano en cinco segundos. Revisa la carga, el inicio de sesión o los avisos del sistema antes de continuar; no repitas la activación sola.",requested_app=bundle_id,foreground_app=app,foreground_verified=False,recovery={"next_tool":"pua_observe","next_arguments":{"mode":"both"},"replay_action":False})
             app=self.active_app(timeout=remaining)
             if app==bundle_id:break
             time.sleep(min(.1,max(0,deadline-time.monotonic())))
         result=self.after(expect,observe)
-        result.update(verified=True,verification_deferred=False,foreground_verified=True,verification_scope="Requested app is foreground; user task completion is separate.")
+        result.update(verified=True,verification_deferred=False,foreground_verified=True,verification_scope="La app pedida está en primer plano; terminar la tarea de la persona es aparte.")
         return result
 
     @action_result
     def press_button(self,name,observe="none",verify=False,expect=None):
         if name not in ("home","volumeup","volumedown"):
-            fail("invalid_argument","Supported buttons: home, volumeup, volumedown.")
-        if observe not in ("none","tree","screenshot","both"):fail("invalid_argument","Invalid observe mode.")
-        if not isinstance(verify,bool):fail("invalid_argument","verify must be boolean.")
+            fail("invalid_argument","Botones admitidos: home, volumeup, volumedown.")
+        if observe not in ("none","tree","screenshot","both"):fail("invalid_argument","Modo observe no válido.")
+        if not isinstance(verify,bool):fail("invalid_argument","verify debe ser booleano.")
         if expect:predicate(expect)
         if name!="home":
             self.post("/wda/pressButton",{"name":name})
@@ -619,35 +619,35 @@ class PhoneController:
                 app=self.active_app(timeout=max(.05,deadline-time.monotonic()))
                 if app=="com.apple.springboard":break
                 if time.monotonic()>=deadline:
-                    fail("postcondition_failed","Home request returned, but SpringBoard did not become foreground. Inspect fresh state; do not loop on the same button.",foreground_app=app)
+                    fail("postcondition_failed","Home respondió, pero SpringBoard no pasó a primer plano. Revisa el estado reciente; no repitas el mismo botón en bucle.",foreground_app=app)
                 time.sleep(min(.1,max(0,deadline-time.monotonic())))
             result=self.after(expect,observe)
-            result.update(verified=True,verification_deferred=False,foreground_verified=True,foreground_app=app,verification_scope="Home navigation: SpringBoard is foreground; user task completion is separate.")
+            result.update(verified=True,verification_deferred=False,foreground_verified=True,foreground_app=app,verification_scope="Navegación a Home: SpringBoard está en primer plano; terminar la tarea de la persona es aparte.")
             return result
         except WDAError as exc:
-            exc.details.update({"action_executed":True,"home_foreground_verified":app=="com.apple.springboard","verification_required":"Home was requested. Inspect fresh state before another action; do not automatically replay."})
+            exc.details.update({"action_executed":True,"home_foreground_verified":app=="com.apple.springboard","verification_required":"Se pidió Home. Revisa el estado reciente antes de otra acción; no la repitas sola."})
             raise
 
     @action_result
     def type_text(self,selector=None,text=None,allow_newlines=False,submit=False,replace=True,observe="none",verify=False,expect=None,continue_token=None):
         if continue_token is not None:
             if selector is not None or text is not None or expect is not None or allow_newlines or submit or not replace or verify or observe!="none":
-                fail("invalid_argument","continue_token resumes the earlier call with the options given there; pass it alone.",action_executed=False)
+                fail("invalid_argument","continue_token reanuda la llamada anterior con las opciones de entonces; pásalo solo.",action_executed=False)
             return self.continue_input(continue_token)
         if text is None:
-            fail("invalid_argument","type_text needs text, or continue_token alone.",action_executed=False)
+            fail("invalid_argument","type_text necesita text, o continue_token solo.",action_executed=False)
         if not isinstance(text,str) or not 1<=len(text)<=10000 or "\x00" in text:
-            fail("invalid_argument","text must have 1..10000 characters without NUL.")
+            fail("invalid_argument","text debe tener de 1 a 10000 caracteres y no puede contener NUL.")
         if ("\n" in text or "\r" in text) and not allow_newlines:
-            fail("newline_requires_intent","This text contains line breaks, which can send a message. Use allow_newlines only for an observed multiline editor.")
-        if observe not in ("none","tree","screenshot","both"):fail("invalid_argument","Invalid observe mode.")
-        if not isinstance(verify,bool):fail("invalid_argument","verify must be boolean.")
+            fail("newline_requires_intent","Este texto tiene saltos de línea, que pueden enviar un mensaje. Usa allow_newlines solo en un editor multilínea observado.")
+        if observe not in ("none","tree","screenshot","both"):fail("invalid_argument","Modo observe no válido.")
+        if not isinstance(verify,bool):fail("invalid_argument","verify debe ser booleano.")
         if expect:predicate(expect)
         try:path,kind=self.target(selector,editable=True,with_kind=True) if selector is not None else self.focused_field()
         except WDAError as error:
             self.switch_to_coordinates(error,typing=True);raise
         if ("\n" in text or "\r" in text) and kind!="XCUIElementTypeTextView":
-            fail("newline_unsafe","Line breaks are allowed only for a verified TextView.")
+            fail("newline_unsafe","Los saltos de línea solo se permiten en un TextView verificado.")
         before=(self.client.session("GET",path+"/attribute/value") or "") if verify and not replace else ""
         self.pending_input=None
         # Without a selector the field was focused by a coordinate tap; another tap could move the caret.
@@ -659,7 +659,7 @@ class PhoneController:
 
     def focused_field(self):
         """The editable element that has keyboard focus, for typing after a coordinate tap."""
-        missing="No text field has keyboard focus; no text was entered. Inspect the screenshot for a blocking popup or wrong target, then tap the visible field with pua_tap x/y. Do not repeat a failed point blindly."
+        missing="Ningún campo de texto tiene el foco del teclado; no se escribió nada. Inspecciona la captura por si hay una ventana emergente o un objetivo incorrecto, y pulsa el campo visible con pua_tap x/y. No repitas a ciegas un punto fallido."
         try:found=self.client.session("GET","/element/active")
         except WDAError as error:
             if error.code!="no such element":raise
@@ -670,7 +670,7 @@ class PhoneController:
         path="/element/"+quote(ident,safe="")
         kind=found.get("type") or self.client.session("GET",path+"/attribute/type")
         if kind not in EDITABLE:
-            fail("not_editable","The focused element is not a readable text field. Ask the user to handle secure fields.",secure_field=kind=="XCUIElementTypeSecureTextField")
+            fail("not_editable","El elemento enfocado no es un campo de texto legible. Pide a la persona que atienda los campos seguros.",secure_field=kind=="XCUIElementTypeSecureTextField")
         return path,kind
 
     def type_pieces(self,plan):
@@ -697,20 +697,20 @@ class PhoneController:
             self.pending_input=plan
             return {"action_executed":True,"action_complete":False,"input_complete":False,"verified":False,"verification_deferred":True,
                     "characters":plan["typed"],"remaining_characters":plan["total"]-plan["typed"],"submitted":False,"continue_token":plan["token"],
-                    "next_step":"Call pua_type_text with only continue_token to type the rest. Do not resend the text or act on the phone in between."}
+                    "next_step":"Llama a pua_type_text solo con continue_token para escribir el resto. No reenvíes el texto ni actúes en el iPhone entre medias."}
         self.pending_input=None
         if plan["verify"]:
             actual=self.client.session("GET",plan["path"]+"/attribute/value")
             if actual!=plan["expected"]:
-                fail("input_mismatch","Typed text did not round-trip exactly. Do not submit or blindly type it again.",expected_length=len(plan["expected"]),actual_length=len(str(actual or "")))
+                fail("input_mismatch","El texto escrito no volvió exactamente igual. No lo envíes ni lo vuelvas a escribir a ciegas.",expected_length=len(plan["expected"]),actual_length=len(str(actual or "")))
         result={"action_executed":True,"action_complete":True,"verified":plan["verify"],"verification_deferred":not plan["verify"],"exact_readback":plan["verify"],"characters":plan["total"],"submitted":False}
         if plan["submit"]:
             self.post("/wda/keys",{"value":["\n"]})
-            result.update({"submitted":True,"verified":False,"verification_deferred":True,"submission_verified":False,"verification_required":"Check the final submission result before claiming task completion; do not automatically repeat submission."})
+            result.update({"submitted":True,"verified":False,"verification_deferred":True,"submission_verified":False,"verification_required":"Comprueba el resultado final del envío antes de dar la tarea por terminada; no repitas el envío solo."})
         if plan["expect"]:
             result["postcondition"]=self.wait(plan["expect"])
             result.update(verified=True,verification_deferred=False)
-            if plan["submit"]:result.update(submission_verified=True,verification_scope="Expected selector is present; verify the final business outcome before claiming task completion.")
+            if plan["submit"]:result.update(submission_verified=True,verification_scope="El selector esperado está presente; comprueba el resultado final del negocio antes de dar la tarea por terminada.")
         if plan["observe"]!="none":result["observation"]=self.observe_after(plan["observe"])
         return result
 
@@ -718,18 +718,18 @@ class PhoneController:
         plan=self.pending_input
         if not plan or plan["token"]!=token or self.accepted_actions!=plan["mark"] or time.monotonic()-plan["created"]>INPUT_TTL:
             self.pending_input=None
-            fail("input_continuation_expired","This continuation is no longer usable: it was already finished, it expired, or another phone action ran since. Nothing was typed now.",action_executed=False,
-                 recovery={"replay_action":False,"next_step":"Read the field's actual text, then type only the missing remainder with replace=false."})
+            fail("input_continuation_expired","Esta continuación ya no sirve: terminó, caducó u otra acción del iPhone se ejecutó después. Ahora no se escribió nada.",action_executed=False,
+                 recovery={"replay_action":False,"next_step":"Lee el texto real del campo y escribe solo el resto que falte con replace=false."})
         return self.type_pieces(plan)
 
     def region(self,region,viewport):
         if region is None:
             return {"x":viewport["width"]*.15,"y":viewport["height"]*.25,"width":viewport["width"]*.7,"height":viewport["height"]*.5}
         if not isinstance(region,dict) or set(region)!={"x","y","width","height"}:
-            fail("invalid_argument","region must have x/y/width/height in iPhone points.")
+            fail("invalid_argument","region debe tener x, y, width y height en puntos del iPhone.")
         for k,v in region.items():finite(v,k,0 if k in ("x","y") else 1)
         if region["x"]+region["width"]>viewport["width"] or region["y"]+region["height"]>viewport["height"]:
-            fail("invalid_argument","Gesture region is outside viewport.")
+            fail("invalid_argument","La región del gesto está fuera del viewport.")
         return region
 
     def native_modals(self,nodes):
@@ -770,16 +770,16 @@ class PhoneController:
 
     @action_result
     def swipe(self,direction="up",region=None,observation_id=None,expect=None,verify=False,max_attempts=1,observe="none",_baseline=None,_max_nodes=100):
-        if direction not in ("up","down","left","right"):fail("invalid_argument","Invalid direction.")
-        if observe not in ("none","tree","screenshot","both"):fail("invalid_argument","Invalid observe mode.")
+        if direction not in ("up","down","left","right"):fail("invalid_argument","Dirección no válida.")
+        if observe not in ("none","tree","screenshot","both"):fail("invalid_argument","Modo observe no válido.")
         integer(max_attempts,"max_attempts",1,2)
-        if not isinstance(verify,bool):fail("invalid_argument","verify must be boolean.")
+        if not isinstance(verify,bool):fail("invalid_argument","verify debe ser booleano.")
         if expect:predicate(expect)
         viewport=self.guard_region(observation_id,region) if observation_id is not None else None
         if verify:
             before,current_viewport=_baseline if _baseline is not None else self.tree()
             if viewport is not None and current_viewport!=viewport:
-                stale("Viewport changed while preparing this scroll.","viewport_changed","region")
+                stale("El viewport cambió al preparar este desplazamiento.","viewport_changed","region")
             viewport=current_viewport
         else:
             before=[]
@@ -789,10 +789,10 @@ class PhoneController:
         if modals:
             contained=lambda m:area["x"]>=m["rect"]["x"] and area["y"]>=m["rect"]["y"] and area["x"]+area["width"]<=m["rect"]["x"]+m["rect"]["width"] and area["y"]+area["height"]<=m["rect"]["y"]+m["rect"]["height"]
             if region is None or not all(contained(m) for m in modals):
-                details={"action_executed":False,"verified":False,"region":area,"native_modals":self.modal_report(modals),"recovery":{"next_tool":"pua_observe","next_arguments":{"mode":"both"},"replay_action":False,"next_step":"Handle the existing modal first, or choose a fresh explicit scroll region wholly inside its intended list. Do not scroll the underlying page through a modal."}}
+                details={"action_executed":False,"verified":False,"region":area,"native_modals":self.modal_report(modals),"recovery":{"next_tool":"pua_observe","next_arguments":{"mode":"both"},"replay_action":False,"next_step":"Atiende primero el modal existente, o elige una región de desplazamiento explícita y reciente que quepa entera en su lista. No desplaces la página de debajo a través de un modal."}}
                 observed=self.scroll_observation(before,viewport,"tree" if observe in ("tree","both") else "none",_max_nodes)
                 if observed:details["observation"]=observed
-                fail("modal_requires_region" if region is None else "blocked_scroll_region","Native modals are present. The intended scroll area must be explicit and inside every modal's bounds; otherwise handle the foreground modal first.",**details)
+                fail("modal_requires_region" if region is None else "blocked_scroll_region","Hay modales nativos. El área de desplazamiento debe ser explícita y caber dentro de cada modal; si no, atiende primero el modal en primer plano.",**details)
         x=area["x"]+area["width"]/2;y=area["y"]+area["height"]/2
         dx=area["width"]*.32;dy=area["height"]*.32
         points={"up":(x,y+dy,x,y-dy),"down":(x,y-dy,x,y+dy),"left":(x+dx,y,x-dx,y),"right":(x-dx,y,x+dx,y)}[direction]
@@ -811,24 +811,24 @@ class PhoneController:
             details={"action_executed":True,"verified":False,"changed":False,"attempts":1,"reasons":reasons,"recovery":{"same_gesture_retry":False,"replay_action":False}}
             observed=self.scroll_observation(after,v,"tree" if observe in ("tree","both") else "none",_max_nodes)
             if observed:details["observation"]=observed
-            fail("scroll_context_changed","A gesture was accepted, but the viewport or native modal context changed. Inspect the screenshot before choosing another action.",**details)
+            fail("scroll_context_changed","Se aceptó un gesto, pero cambiaron el viewport o el contexto del modal nativo. Inspecciona la captura antes de otra acción.",**details)
         changed=self.scroll_progress(before,after,area,direction)
         if changed:
-            result={"action_executed":True,"action_complete":True,"verified":True,"verification_deferred":False,"changed":True,"progress_verified":True,"verification_scope":"Stable accessibility anchors moved in the requested direction; business coverage is separate.", "attempts":1,"strategy":"short_drag"}
+            result={"action_executed":True,"action_complete":True,"verified":True,"verification_deferred":False,"changed":True,"progress_verified":True,"verification_scope":"Las anclas de accesibilidad estables se movieron en la dirección pedida; la cobertura del negocio es aparte.", "attempts":1,"strategy":"short_drag"}
             observed=self.scroll_observation(after,v,observe,_max_nodes)
             if observed:result["observation"]=observed
             if expect:result["postcondition"]=self.wait(expect)
             return result
         details={"action_executed":True,"verified":False,"changed":False,"attempts":1,"region":area,
-                 "recovery":{"next_tool":"pua_observe","next_arguments":{"mode":"both"},"next_step":"Inspect the current page and list entrance. If this is an overview, tap the actual list entry; if at the end, reconcile counts. Otherwise inspect a screenshot, including custom pickers/overlays that may not appear as native modals, or another stable region.","same_gesture_retry":False,"end_of_list_proven":False}}
+                 "recovery":{"next_tool":"pua_observe","next_arguments":{"mode":"both"},"next_step":"Revisa la página actual y la entrada de la lista. Si es un resumen, pulsa la entrada real de la lista; si estás al final, reconcilia los recuentos. Si no, inspecciona una captura, incluidos selectores o capas a medida que pueden no aparecer como modales nativos, u otra región estable.","same_gesture_retry":False,"end_of_list_proven":False}}
         observed=self.scroll_observation(after,v,"tree" if observe in ("tree","both") else "none",_max_nodes)
         if observed:details["observation"]=observed
-        fail("no_scroll_progress","Gestures executed but stable accessibility anchors did not show movement in the requested direction. The page may be an overview, boundary, blocked region or custom-rendered list. Changing numbers alone are not scroll progress. This does not prove an empty or complete list; inspect returned state before choosing the next action.",**details)
+        fail("no_scroll_progress","Se ejecutaron gestos, pero las anclas de accesibilidad estables no se movieron en la dirección pedida. La página puede ser un resumen, un límite, una región bloqueada o una lista dibujada a medida. Que cambien los números no es avance del desplazamiento. Esto no demuestra una lista vacía o completa; revisa el estado devuelto antes de la siguiente acción.",**details)
 
     @action_result
     def scroll_find(self,selector,direction="up",max_swipes=1):
         predicate(selector);integer(max_swipes,"max_swipes",0,10)
-        if direction not in ("up","down","left","right"):fail("invalid_argument","Invalid direction.")
+        if direction not in ("up","down","left","right"):fail("invalid_argument","Dirección no válida.")
         # At most one gesture per call: unresolved state goes to the model's
         # screenshot fallback before any further scrolling, even with a larger budget.
         for count in range(min(max_swipes,1)+1):
@@ -842,14 +842,14 @@ class PhoneController:
                     if exc.code!="offscreen_target" or count or not max_swipes:raise
             if count==min(max_swipes,1):break
             self.swipe(direction,verify=False,observe="none")
-        fail("search_exhausted","No hittable match after this search step. Inspect the screenshot before deciding whether to scroll again; do not automatically repeat the search or increase max_swipes.",
+        fail("search_exhausted","No hay una coincidencia pulsable tras este paso de búsqueda. Inspecciona la captura antes de decidir si desplazas otra vez; no repitas la búsqueda ni subas max_swipes.",
              swipes=count,max_swipes=max_swipes,stop_reason="visual_check_required",action_executed=count>0)
 
     @action_result
     def collect_list(self,row_type="Cell",max_pages=6,end_selector=None):
         integer(max_pages,"max_pages",1,10)
         if end_selector:predicate(end_selector)
-        if not isinstance(row_type,str) or not re.fullmatch(r"(?:XCUIElementType)?[A-Za-z]+",row_type):fail("invalid_argument","Invalid row_type.")
+        if not isinstance(row_type,str) or not re.fullmatch(r"(?:XCUIElementType)?[A-Za-z]+",row_type):fail("invalid_argument","row_type no válido.")
         kind=row_type if row_type.startswith("XCUIElementType") else "XCUIElementType"+row_type
         rows={};pages=[];seen_pages=set();reason="page_budget";end=False
         observed=self.observe(max_nodes=500)
@@ -877,21 +877,21 @@ class PhoneController:
             observed=self.swipe("up",verify=False,observe="tree",_baseline=(nodes,observed["viewport"]),_max_nodes=500)["observation"]
         result={"rows":[compact_node(row) for row in rows.values()],"pages":pages,"stop_reason":reason,"end_marker_seen":end,"complete":False,
                 "coverage_verified":end and not any(p["truncated"] for p in pages),
-                "limitations":["Rows deduplicate by identical type/name/label/value; identical rows may collapse.","Only exposed accessibility labels are collected. Reconcile expected counts, screenshot-only fields, totals, currencies and dates before claiming business completeness."]}
+                "limitations":["Las filas se deduplican por type, name, label y value idénticos; las filas iguales pueden colapsar.","Solo se recogen las etiquetas de accesibilidad expuestas. Reconcilia recuentos esperados, campos que solo se ven en la captura, totales, monedas y fechas antes de declarar el negocio completo."]}
         if reason=="no_progress":
-            error=WDAError("no_scroll_progress","Repeated collection page; inspect the screenshot before continuing.",details={"observation":observed,"action_executed":index>0,"recovery":{"same_gesture_retry":False,"end_of_list_proven":False}})
+            error=WDAError("no_scroll_progress","Página de recogida repetida; inspecciona la captura antes de continuar.",details={"observation":observed,"action_executed":index>0,"recovery":{"same_gesture_retry":False,"end_of_list_proven":False}})
             self.switch_to_coordinates(error)
             result.update({key:value for key,value in error.details.items() if key in ("observation","observation_error","recovery")})
         return result
 
     def batch(self,steps):
         if not isinstance(steps,list) or not 1<=len(steps)<=20:
-            fail("invalid_argument","steps must contain 1..20 operations.")
+            fail("invalid_argument","steps debe contener de 1 a 20 operaciones.")
         allowed={"tap":self.tap,"swipe":self.swipe,"type_text":self.type_text,"launch_app":self.launch_app,"press_button":self.press_button,"wait":self.wait,"observe":self.observe,"scroll_find":self.scroll_find}
         # Validate every step's shape before executing anything. Tool schemas validate nested arguments in the MCP layer.
         for step in steps:
             if not isinstance(step,dict) or set(step)-{"op","args"} or step.get("op") not in allowed or not isinstance(step.get("args",{}),dict):
-                fail("invalid_argument","Each batch step needs a supported op and args object.")
+                fail("invalid_argument","Cada paso del batch necesita un op admitido y un objeto args.")
         results=[]
         # One call stays inside the host's tool timeout: later steps are handed back, never dropped silently.
         self._deadline=time.monotonic()+self.call_budget
@@ -899,12 +899,12 @@ class PhoneController:
             for index,step in enumerate(steps):
                 if index and time.monotonic()>=self._deadline:
                     return {"completed_steps":len(results),"stopped_at":index,"stop_reason":"time_budget","results":results,"complete":False,
-                            "next_step":"Send the steps from stopped_at onward in a new call. Completed steps were executed and must not be repeated."}
+                            "next_step":"Envía en una llamada nueva los pasos desde stopped_at. Los pasos completados ya se ejecutaron y no deben repetirse."}
                 try:
                     result=allowed[step["op"]](**step.get("args",{}))
                     if result.get("input_complete") is False:
                         return {"completed_steps":len(results),"stopped_at":index,"stop_reason":"input_continues","results":results+[result],"complete":False,
-                                "next_step":"Call pua_type_text with the returned continue_token until input_complete, then send the steps after stopped_at."}
+                                "next_step":"Llama a pua_type_text con el continue_token devuelto hasta input_complete y luego envía los pasos posteriores a stopped_at."}
                     results.append(result)
                     if result.get("submitted") and not result.get("submission_verified"):
                         return {"completed_steps":len(results),"stopped_at":index,"stop_reason":"submission_requires_verification","results":results,"complete":False}

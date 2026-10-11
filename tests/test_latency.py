@@ -127,7 +127,7 @@ class CompactObservationTests(PhoneCase):
         self.client.nodes = []
         observed = self.phone.observe()
         self.assertEqual(observed["nodes"], [])
-        self.assertIn("Empty accessibility tree", observed["warnings"][0])
+        self.assertIn("Árbol de accesibilidad vacío", observed["warnings"][0])
 
     def test_departures_from_defaults_stay_visible(self):
         self.client.nodes = [node("On screen"), node("Below", y=2000), {**node("Hidden", y=300), "visible": False}]
@@ -302,7 +302,7 @@ class CoordinateFallbackTests(PhoneCase):
                 details = error.details
                 self.assertFalse(details["action_executed"])
                 self.assertEqual((details["recovery"]["use"], details["recovery"]["next_tool"]), ("coordinates", "pua_tap"))
-                self.assertIn("Do not try other selector spellings", details["recovery"]["next_step"])
+                self.assertIn("No pruebes otras formas del selector", details["recovery"]["next_step"])
                 self.assertEqual(Path(details["observation"]["image"]["path"]).read_bytes(), self.client.screenshot)
                 self.assertEqual(self.client.actions(), [])
                 # The model sees the screen in the same failed result, with no extra observe round.
@@ -310,7 +310,7 @@ class CoordinateFallbackTests(PhoneCase):
                 self.assertEqual([item["type"] for item in content], ["text", "image"])
                 if code == "occluded_target":
                     self.assertNotIn("next_arguments", details["recovery"])
-                    self.assertIn("Inspect the attached screenshot FIRST", details["recovery"]["next_step"])
+                    self.assertIn("Inspecciona primero la captura adjunta", details["recovery"]["next_step"])
                 if code == "ambiguous_target":
                     self.assertEqual([candidate["tap"] for candidate in details["candidates"]], [[195, 222], [195, 422]])
 
@@ -341,7 +341,7 @@ class CoordinateFallbackTests(PhoneCase):
     def test_failed_selector_typing_points_to_tap_then_focused_input(self):
         self.client.elements.clear()
         error = self.assert_code("no_such_element", lambda: self.phone.type_text({"label": "Search"}, "query"))
-        self.assertIn("no selector", error.details["recovery"]["next_step"])
+        self.assertIn("sin selector", error.details["recovery"]["next_step"])
         self.assertIn("image", error.details["observation"])
         self.assertEqual(self.client.actions(), [])
 

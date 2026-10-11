@@ -141,7 +141,7 @@ class SetupTests(unittest.TestCase):
         self.assertNotIn("supersecret", result["log_tail"])
         self.assertNotIn("private-token", result["log_tail"])
         self.assertNotIn("owner_token", result)
-        self.assertTrue(any("expired" in hint for hint in result["next_steps"]))
+        self.assertTrue(any("caducado" in hint for hint in result["next_steps"]))
 
     def test_only_owned_process_group_can_be_stopped(self):
         owned, stale = self.job(), self.job(token="old-token", pid=12346)
@@ -201,7 +201,7 @@ class SetupTests(unittest.TestCase):
              patch.object(wda_setup.shutil, "which", return_value="/usr/bin/xcodebuild"):
             result = self.manager.setup("start", wait_seconds=0)
         self.assertFalse(result["ok"])
-        self.assertIn("build successfully", result["error"])
+        self.assertIn("build con éxito", result["error"])
 
     def test_start_reuses_ready_external_service_without_spawning(self):
         self.configure()
@@ -265,8 +265,8 @@ class SetupTests(unittest.TestCase):
             self.prepare_start(port)
             result, create = self.start_without_device()
             self.assertFalse(result["ok"])
-            self.assertIn("Local forward port is occupied", result["error"])
-            self.assertTrue(any("do not kill unrelated" in hint for hint in result["next_steps"]))
+            self.assertIn("puerto local de reenvío está ocupado", result["error"])
+            self.assertTrue(any("no mates procesos ajenos" in hint for hint in result["next_steps"]))
             create.assert_not_called()
             with socket.create_connection(("127.0.0.1", port), timeout=2) as client:
                 accepted, _ = listener.accept()
@@ -274,8 +274,8 @@ class SetupTests(unittest.TestCase):
 
     def test_xctest_authorization_failure_has_owned_restart_diagnostic(self):
         hints = wda_setup._diagnose("Error Domain=XCTDaemonErrorDomain Code=41: Not authorized for performing UI testing actions")
-        self.assertTrue(any("status.ready is true" in hint and "owned start job" in hint for hint in hints))
-        self.assertTrue(any("Preserve external services" in hint and "pua_ready" in hint for hint in hints))
+        self.assertTrue(any("status.ready sea true" in hint and "trabajo start propio" in hint for hint in hints))
+        self.assertTrue(any("servicios externos" in hint and "pua_ready" in hint for hint in hints))
 
     def test_build_command_uses_explicit_build_for_testing_no_shell(self):
         self.configure()
@@ -302,7 +302,7 @@ class SetupTests(unittest.TestCase):
                 break
             time.sleep(0.02)
         self.assertEqual(job["state"], "failed")
-        self.assertIn("Unsupported worker action", job["error"])
+        self.assertIn("Acción de worker no admitida", job["error"])
         self.assertEqual(job["worker_entrypoint"], str(Path(wda_setup.__file__).resolve()))
         self.assertEqual(path.stat().st_mode & 0o777, 0o600)
         self.assertEqual((self.manager.state_dir / "logs" / (job["id"] + ".log")).stat().st_mode & 0o777, 0o600)
@@ -524,7 +524,7 @@ class SetupTests(unittest.TestCase):
         self.assertIsNone(restarted.pending_recovery())
         status = restarted._job_status(queued)
         self.assertEqual(status["state"], "interrupted")
-        self.assertIn("no unrelated process", status["error"])
+        self.assertIn("ningún proceso ajeno", status["error"])
         with patch.object(restarted, "_create_job") as create:
             result = restarted.recover()
         self.assertEqual(result["recovery"]["state"], "cooldown")
@@ -600,7 +600,7 @@ class SetupTests(unittest.TestCase):
             wda_setup._write_json(self.manager._job_path(original["id"]), changed)
             with patch.object(self.manager, "_owns_listener", return_value=mismatch != "listener"), \
                  patch.object(wda_setup.os, "killpg") as kill:
-                with self.assertRaisesRegex(ValueError, "no process was signalled"):
+                with self.assertRaisesRegex(ValueError, "no se señaló ningún proceso"):
                     self.manager._stop_recovery_target(job)
             kill.assert_not_called()
 
@@ -623,7 +623,7 @@ class SetupTests(unittest.TestCase):
              patch.object(self.manager, "_listener_pids", return_value=[99999]), \
              patch.object(wda_setup.os, "getpgid", return_value=99999), \
              patch.object(wda_setup.os, "killpg") as kill:
-            with self.assertRaisesRegex(ValueError, "Another service"):
+            with self.assertRaisesRegex(ValueError, "Otro servicio"):
                 self.manager._stop_recovery_target(job)
         kill.assert_called_once_with(original["pid"], signal.SIGTERM)
 
@@ -637,7 +637,7 @@ class SetupTests(unittest.TestCase):
              patch.object(wda_setup.os, "killpg") as kill, \
              patch.object(wda_setup.time, "monotonic", side_effect=lambda: next(clock)), \
              patch.object(wda_setup.time, "sleep"):
-            with self.assertRaisesRegex(ValueError, "within 10 seconds"):
+            with self.assertRaisesRegex(ValueError, "10 segundos"):
                 self.manager._stop_recovery_target(job)
         kill.assert_called_once_with(original["pid"], signal.SIGTERM)
 
@@ -650,7 +650,7 @@ class SetupTests(unittest.TestCase):
              patch.object(wda_setup.os, "killpg") as kill:
             result = self.manager.recover()
         self.assertFalse(result["ok"])
-        self.assertIn("build successfully", result["error"])
+        self.assertIn("build con éxito", result["error"])
         create.assert_not_called()
         kill.assert_not_called()
 

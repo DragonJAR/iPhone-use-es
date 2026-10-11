@@ -74,17 +74,18 @@ const FRAME_INTERVAL = 250;
 const REQUEST_TIMEOUT = 3000;
 // A screenshot or Home may queue behind the phone operation already running.
 const ACTION_TIMEOUT = 12000;
-const LIVE_TEXT: Record<LiveState, string> = { connecting: '连接中', live: 'Live', paused: '已暂停', offline: '未连接' };
+const LIVE_TEXT: Record<LiveState, string> = { connecting: 'Conectando', live: 'En vivo', paused: 'En pausa', offline: 'Sin conexión' };
 const EMPTY_TEXT: Record<EmptyState, string> = {
-  connecting: '正在连接', offline: '未连接', locked: '等待解锁',
-  authentication: '请完成认证', paused: '预览已暂停', unavailable: '画面暂不可用',
+  connecting: LIVE_TEXT.connecting, offline: LIVE_TEXT.offline, locked: 'Desbloquea el iPhone',
+  authentication: 'Completa la autenticación', paused: 'Vista previa en pausa', unavailable: 'Imagen no disponible',
 };
-const DONE: Record<ToolName, string> = { refresh: '已刷新连接', home: '已回到主屏幕', screenshot: '截图已复制到剪贴板' };
+const DONE: Record<ToolName, string> = { refresh: 'Conexión actualizada', home: 'El iPhone volvió a la pantalla de inicio', screenshot: 'Captura copiada al portapapeles' };
+const GENERIC_FAILURE = 'Operación no completada, inténtalo de nuevo';
 const FAILED: Record<string, string> = {
-  device_busy: '手机正在执行操作，请稍后再试',
-  preview_paused: '认证接管期间已暂停',
-  clipboard_unavailable: '截图未能写入剪贴板',
-  pua_unreachable: '未连接到手机',
+  device_busy: 'El teléfono está ocupado; inténtalo más tarde',
+  preview_paused: 'Vista previa en pausa durante la autenticación',
+  clipboard_unavailable: 'No se pudo escribir la captura en el portapapeles',
+  pua_unreachable: 'Sin conexión con el teléfono',
 };
 
 const validSize = (value: unknown): value is Size => {
@@ -311,10 +312,10 @@ function consume(value: unknown) {
   if (preview.paused === true) {
     clearFrame();
     setLive('paused');
-    liveText.textContent = preview.pause_reason === 'device_locked' ? '等待解锁' : LIVE_TEXT.paused;
+    liveText.textContent = preview.pause_reason === 'device_locked' ? EMPTY_TEXT.locked : LIVE_TEXT.paused;
     liveText.title = preview.pause_reason === 'device_locked'
-      ? '解锁 iPhone 后继续任务，或点击刷新恢复预览'
-      : '预览已暂停；完成手机认证后继续任务或点击刷新恢复画面';
+      ? 'Desbloquea el iPhone para continuar o pulsa Actualizar para reanudar la vista previa'
+      : 'Vista previa en pausa; tras completar la autenticación, continúa la tarea o pulsa Actualizar para reanudar la imagen';
     showEmpty(preview.pause_reason === 'device_locked' ? 'locked'
       : preview.pause_reason === 'authentication' ? 'authentication' : 'paused');
     return;
@@ -416,18 +417,18 @@ async function act(name: ToolName) {
     const data = result.structuredContent as (Partial<Preview> & { service_ready?: boolean; error?: { code?: string } }) | undefined;
     if (result.isError || data?.error) {
       if (name === 'refresh' && !image.src) showEmpty(previousEmptyState);
-      notify(FAILED[data?.error?.code ?? ''] ?? '操作未完成，请重试', true);
+      notify(FAILED[data?.error?.code ?? ''] ?? GENERIC_FAILURE, true);
     } else {
       // A refresh answers with the new stream identity; take the next frame at once.
       if (name === 'refresh') consume(data);
-      notify(name === 'refresh' && data?.service_ready === false ? '未连接到手机，请确认连接后重试' : DONE[name], name === 'refresh' && data?.service_ready === false);
+      notify(name === 'refresh' && data?.service_ready === false ? 'Sin conexión con el teléfono; confirma la conexión e inténtalo de nuevo' : DONE[name], name === 'refresh' && data?.service_ready === false);
       if (timer) clearTimeout(timer);
       timer = undefined;
       schedule(0);
     }
   } catch {
     if (name === 'refresh' && !image.src) showEmpty(previousEmptyState);
-    notify('操作未完成，请重试', true);
+    notify(GENERIC_FAILURE, true);
   } finally {
     acting = false;
     delete tools[name].dataset.busy;

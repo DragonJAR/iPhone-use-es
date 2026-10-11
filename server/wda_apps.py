@@ -69,24 +69,24 @@ def _api_url(url):
 class _AppleRedirects(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         if not _api_url(newurl):
-            raise ValueError("Apple catalog redirected outside the allowed HTTPS API.")
+            raise ValueError("El catálogo de Apple redirigió fuera de la API HTTPS permitida.")
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
 def fetch_apple(url):
     """Fetch JSON only from the fixed Apple HTTPS endpoints, with a 5s timeout."""
     if not _api_url(url):
-        raise ValueError("Only https://itunes.apple.com/search or /lookup is allowed.")
+        raise ValueError("Solo se permite https://itunes.apple.com/search o /lookup.")
     request = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "iPhone-use/0.3"})
     with urllib.request.build_opener(_AppleRedirects()).open(request, timeout=5) as response:
         if not _api_url(response.geturl()):
-            raise ValueError("Apple catalog returned an unexpected response URL.")
+            raise ValueError("El catálogo de Apple devolvió una URL de respuesta inesperada.")
         raw = response.read(MAX_RESPONSE_BYTES + 1)
     if len(raw) > MAX_RESPONSE_BYTES:
-        raise ValueError("Apple catalog response exceeded the size limit.")
+        raise ValueError("La respuesta del catálogo de Apple superó el límite de tamaño.")
     document = json.loads(raw.decode("utf-8"))
     if not isinstance(document, dict) or not isinstance(document.get("results"), list):
-        raise ValueError("Apple catalog returned an unexpected JSON shape.")
+        raise ValueError("El catálogo de Apple devolvió una forma de JSON inesperada.")
     return document
 
 
@@ -119,7 +119,7 @@ class AppCatalog:
     def __init__(self, state_dir: Path, setup_manager):
         self.state_dir = Path(state_dir).expanduser().resolve()
         if any((ancestor / ".git").exists() for ancestor in (self.state_dir, *self.state_dir.parents)):
-            raise ValueError("App inventory/cache state must stay outside Git checkouts.")
+            raise ValueError("El inventario y la caché de apps deben quedar fuera de los checkouts de Git.")
         self.state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.state_dir.chmod(0o700)
         self.setup_manager = setup_manager
@@ -161,7 +161,7 @@ class AppCatalog:
         config = self.setup_manager.config
         udid = config.get("udid") if isinstance(config, dict) else None
         if not isinstance(udid, str) or not re.fullmatch(r"[A-Za-z0-9-]{8,64}", udid):
-            return [], False, "No selected device. Use pua_setup discover/configure, then retry source=installed."
+            return [], False, "No hay un dispositivo seleccionado. Usa pua_setup discover/configure y reintenta source=installed."
         device_key = hashlib.sha256(udid.encode()).hexdigest()
         cache_path = self.state_dir / "apps-installed-cache.json"
         cache = _read(cache_path, {})
@@ -179,14 +179,14 @@ class AppCatalog:
                                     text=True, capture_output=True, timeout=10, check=False)
             document = _read(name, {})
             if result.returncode != 0 or not isinstance(document.get("result", {}).get("apps"), (list, dict)):
-                return [], False, "Could not list selected-device apps. Unlock/connect the iPhone, verify Xcode pairing and retry; catalog candidates are not installation proof."
+                return [], False, "No se pudieron listar las apps del dispositivo seleccionado. Desbloquea y conecta el iPhone, verifica el emparejamiento en Xcode y reintenta. Los candidatos del catálogo no prueban la instalación."
             rows = self.parse_installed(document)
             for row in rows:
                 row["verified_at"] = _now()
             _write(cache_path, {"device_key": device_key, "fetched_at": time.time(), "apps": rows})
             return rows, True, None
         except (OSError, subprocess.TimeoutExpired):
-            return [], False, "Installed-app query unavailable or timed out. Check Xcode/devicectl and device connection."
+            return [], False, "La consulta de apps instaladas no está disponible o agotó el tiempo. Revisa Xcode, devicectl y la conexión del iPhone."
         finally:
             with contextlib.suppress(FileNotFoundError):
                 os.unlink(name)
@@ -212,7 +212,7 @@ class AppCatalog:
             times = _read(rate_path, [])
             times = [stamp for stamp in times if isinstance(stamp, (int, float)) and 0 <= time.time() - stamp < 60] if isinstance(times, list) else []
             if len(times) >= 18:
-                return [], "Apple catalog request budget reached. Use source=catalog/installed or retry after one minute."
+                return [], "Se alcanzó el límite de peticiones al catálogo de Apple. Usa source=catalog o installed, o reintenta tras un minuto."
             _write(rate_path, [*times, time.time()])
         try:
             rows = parse_apple(fetch_apple(url), country, url)
@@ -224,8 +224,8 @@ class AppCatalog:
             return rows, None
         except (OSError, ValueError, urllib.error.URLError) as error:
             if isinstance(error, urllib.error.HTTPError) and error.code in (403, 429):
-                return [], "Apple catalog rejected/throttled the request. Do not retry repeatedly; use local catalog/installed discovery."
-            return [], "Apple catalog request failed or timed out. Try source=catalog/installed or another storefront; do not guess bundle IDs."
+                return [], "El catálogo de Apple rechazó o limitó la petición. No reintentes en bucle; usa el catálogo local o las apps instaladas."
+            return [], "La petición al catálogo de Apple falló o agotó el tiempo. Prueba source=catalog o installed, u otra tienda; no adivines bundle IDs."
 
     @staticmethod
     def _score(row, query):
@@ -240,7 +240,7 @@ class AppCatalog:
                 or not isinstance(country, str) or not re.fullmatch(r"[A-Za-z]{2}", country)
                 or not isinstance(source, str) or source not in {"auto", "catalog", "installed", "apple"}
                 or isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 30):
-            return {"ok": False, "error": {"code": "invalid_argument", "message": "query needs 1–100 characters, country two letters, source auto/catalog/installed/apple, and limit 1–30.", "uncertain": False}}
+            return {"ok": False, "error": {"code": "invalid_argument", "message": "query necesita de 1 a 100 caracteres, country dos letras, source auto/catalog/installed/apple y limit de 1 a 30.", "uncertain": False}}
         query, country = query.strip(), country.lower()
         catalog = self._catalog()
         warnings, searched, candidates = [], [], []
@@ -289,7 +289,7 @@ class AppCatalog:
         result={"ok": ok,
                 "query": query, "country": country, "source": source, "candidates": ranked[:limit],
                 "total_matches": len(ranked), "searched_sources": searched, "warnings": warnings,
-                "next_action": "Choose the matching app/publisher, then pua_launch_app with its bundle_id and verify foreground. App Store/catalog metadata alone does not prove installation."}
+                "next_action": "Elige la app y el publisher que coincidan, luego pua_launch_app con su bundle_id y comprueba el primer plano. Los metadatos de la App Store o del catálogo no prueban la instalación."}
         if not ok:
-            result["error"]={"code":"app_lookup_unavailable","message":" ".join(warnings) or "App lookup could not be completed.","uncertain":False}
+            result["error"]={"code":"app_lookup_unavailable","message":" ".join(warnings) or "No se pudo completar la búsqueda de la app.","uncertain":False}
         return result

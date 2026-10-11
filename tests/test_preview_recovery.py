@@ -143,8 +143,8 @@ class PreviewRecoveryTests(unittest.TestCase):
         self.assertEqual(error.code, "no_focused_field")
         self.assertFalse(error.details["action_executed"])
         recovery = error.details["recovery"]
-        self.assertIn("popup", recovery["next_step"])
-        self.assertIn("do not repeat", recovery["next_step"])
+        self.assertIn("emergente", recovery["next_step"])
+        self.assertIn("no repitas", recovery["next_step"])
         self.assertIn("image(block)", recovery["next_step"])
         self.assertNotIn("next_arguments", recovery)
         self.assertTrue(Path(error.details["observation"]["image"]["path"]).is_file())

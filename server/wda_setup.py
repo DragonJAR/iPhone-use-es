@@ -111,25 +111,25 @@ def _diagnose(text):
     text = text.lower()
     cases = [
         (("not authorized for performing ui testing actions", "xctdaemonerror code=41", "xctdaemonerror code = 41"),
-         "XCTest UI automation authorization is unavailable even if WDA status.ready is true. Inspect setup status, stop only this plugin's owned start job, start it again and verify pua_ready with a current UI observation. Preserve external services and ask their owner to restart them. If authorization still fails, check Developer Mode and Enable UI Automation on the unlocked iPhone; do not bypass trust or authentication prompts."),
+         "La autorización de automatización de interfaz de XCTest no está disponible aunque status.ready sea true. Revisa el estado de setup, detén solo el trabajo start propio de este plugin, inícialo de nuevo y comprueba pua_ready con una observación de interfaz actual. Conserva los servicios externos y pide a su dueño que los reinicie. Si la autorización sigue fallando, revisa Developer Mode y Enable UI Automation en el iPhone desbloqueado; no eludas los avisos de confianza ni de autenticación."),
         (("maximum number", "three apps", "3 apps", "0xe8008029"),
-         "Personal Team app limit: review development apps on the phone yourself. Do not uninstall automatically; remove an app only with the owner's explicit instruction, or use a paid team."),
+         "Límite de apps del Personal Team: revisa tú las apps de desarrollo en el iPhone. No desinstales nada solo; quita una app solo con la instrucción explícita de su dueño, o usa un equipo de pago."),
         (("no accounts", "authentication", "not logged in", "unable to log in", "session has expired"),
-         "Open Xcode Settings > Accounts and sign in or refresh the Apple account yourself. Never send passwords or verification codes to the assistant."),
+         "Abre Xcode Settings > Accounts e inicia sesión o actualiza la cuenta de Apple tú mismo. Nunca envíes contraseñas ni códigos de verificación al asistente."),
         (("no profiles", "provisioning profile", "requires a development team", "signing certificate"),
-         "Check Xcode Accounts, the selected Team ID and unique bundle ID. Allow Xcode automatic signing and verify this device belongs to the provisioning profile."),
+         "Revisa las cuentas de Xcode, el Team ID elegido y un bundle ID único. Permite la firma automática de Xcode y comprueba que este iPhone pertenece al perfil de aprovisionamiento."),
         (("expired", "0xe8008015", "0xe8008018"),
-         "The signing certificate or provisioning profile may have expired. Refresh the Xcode account, rebuild WDA and reinstall the runner; Personal Team profiles commonly need renewal after 7 days."),
+         "El certificado de firma o el perfil de aprovisionamiento pueden haber caducado. Actualiza la cuenta de Xcode, vuelve a compilar WebDriverAgent y reinstala el runner. Los perfiles de Personal Team suelen renovarse a los 7 días."),
         (("developer mode", "developermode"),
-         "On the iPhone enable Settings > Privacy & Security > Developer Mode, restart and confirm the prompt yourself."),
+         "En el iPhone activa Settings > Privacy & Security > Developer Mode, reinicia y confirma el aviso tú mismo."),
         (("untrusted", "invalid code signature", "0xe800801c", "not trusted"),
-         "On the iPhone open Settings > General > VPN & Device Management and trust your development certificate yourself, then unlock the phone and retry."),
+         "En el iPhone abre Settings > General > VPN & Device Management y confía tú en el certificado de desarrollo; luego desbloquea el iPhone y reintenta."),
         (("locked", "unlock", "passcode"),
-         "Unlock the iPhone yourself and keep it awake while the WDA test runner starts. Do not share the passcode."),
+         "Desbloquea el iPhone tú mismo y mantenlo activo mientras arranca el runner de prueba de WebDriverAgent. No compartas el código."),
         (("not paired", "trust this computer", "pairing"),
-         "Reconnect USB, unlock the iPhone, accept Trust This Computer yourself and verify pairing in Xcode Window > Devices and Simulators."),
-        (("address already in use", "eaddrinuse", "local forward port is occupied"),
-         "The local forward port is in use. Reuse an already healthy WDA, stop only this plugin's owned job, or configure another local port; do not kill unrelated processes."),
+         "Reconecta el USB, desbloquea el iPhone, acepta tú Trust This Computer y comprueba el emparejamiento en Xcode Window > Devices and Simulators."),
+        (("address already in use", "eaddrinuse", "local forward port is occupied", "puerto local de reenvío está ocupado"),
+         "El puerto local de reenvío está en uso. Reutiliza un WebDriverAgent ya sano, detén solo el trabajo propio de este plugin o configura otro puerto local; no mates procesos ajenos."),
     ]
     return [hint for needles, hint in cases if any(needle in text for needle in needles)]
 
@@ -138,12 +138,12 @@ class SetupManager:
     def __init__(self, state_dir: Path = None, base_url="http://127.0.0.1:18100"):
         self.state_dir = state_directory(state_dir).resolve()
         if self.state_dir == PLUGIN_ROOT or PLUGIN_ROOT in self.state_dir.parents:
-            raise ValueError("Runtime state must be outside the plugin checkout.")
+            raise ValueError("El estado del runtime debe quedar fuera del checkout del plugin.")
         if any((ancestor / ".git").exists() for ancestor in (self.state_dir, *self.state_dir.parents)):
-            raise ValueError("Runtime state must be outside all Git checkouts, so credentials, device configuration and logs cannot enter a repository.")
+            raise ValueError("El estado del runtime debe quedar fuera de todos los checkouts de Git, para que las credenciales, la configuración del iPhone y los registros no entren en un repositorio.")
         parsed = urllib.parse.urlsplit(base_url)
         if parsed.scheme != "http" or parsed.hostname not in {"127.0.0.1", "localhost", "::1"} or parsed.username or parsed.password or parsed.path not in {"", "/"} or parsed.query or parsed.fragment:
-            raise ValueError("WDA setup requires an HTTP loopback base URL without credentials or a path.")
+            raise ValueError("La configuración de WebDriverAgent exige una URL base HTTP de loopback, sin credenciales ni ruta.")
         self.base_url = base_url.rstrip("/")
         self.port = parsed.port or 80
         self._workers = {}
@@ -167,25 +167,25 @@ class SetupManager:
         for key, pattern in (("udid", r"[A-Za-z0-9-]{8,64}"), ("team_id", r"[A-Z0-9]{10}"),
                              ("bundle_id", r"[A-Za-z][A-Za-z0-9-]*(?:\.[A-Za-z0-9-]+){2,}")):
             if not isinstance(config.get(key), str) or not re.fullmatch(pattern, config[key]):
-                raise ValueError(f"Provide an explicit valid {key}; Apple team IDs are 10 uppercase letters/digits and bundle IDs use reverse-DNS form.")
+                raise ValueError(f"Indica un {key} explícito y válido; los Team ID de Apple tienen 10 letras o dígitos en mayúsculas y los bundle ID usan DNS inverso.")
         for key in ("local_port", "device_port"):
             value = config.get(key)
             if isinstance(value, bool) or not isinstance(value, int) or not 1024 <= value <= 65535:
-                raise ValueError(f"{key} must be an integer between 1024 and 65535.")
+                raise ValueError(f"{key} debe ser un entero entre 1024 y 65535.")
         if config["local_port"] != self.port:
-            raise ValueError(f"local_port must match the MCP base URL port ({self.port}); update the plugin URL and restart MCP to change ports.")
+            raise ValueError(f"local_port debe coincidir con el puerto de la URL base de MCP ({self.port}); actualiza la URL del plugin y reinicia MCP para cambiar de puerto.")
         return config
 
     def _source(self, config):
         source = Path(config["source_dir"]).expanduser().resolve()
         if not (source / "WebDriverAgent.xcodeproj/project.pbxproj").is_file():
-            raise ValueError("WDA source is missing. Run fetch, or configure source_dir to an existing pinned checkout.")
+            raise ValueError("Falta la fuente de WebDriverAgent. Ejecuta fetch o configura source_dir a un checkout fijado que ya exista.")
         revision = _run(["git", "-C", str(source), "rev-parse", "HEAD"])
         if not revision["ok"] or revision["stdout"].strip() != WDA_COMMIT:
-            raise ValueError(f"WDA source must be pinned to {WDA_VERSION} ({WDA_COMMIT}); existing checkouts are never changed automatically.")
+            raise ValueError(f"La fuente de WebDriverAgent debe estar fijada en {WDA_VERSION} ({WDA_COMMIT}); los checkouts existentes no se cambian solos.")
         dirty = _run(["git", "-C", str(source), "status", "--porcelain", "--untracked-files=no"])
         if not dirty["ok"] or dirty["stdout"].strip():
-            raise ValueError("Pinned WDA source has tracked changes. Use fetch for a clean isolated checkout; existing work is preserved.")
+            raise ValueError("La fuente fijada de WebDriverAgent tiene cambios rastreados. Usa fetch para un checkout aislado y limpio; el trabajo existente se conserva.")
         return source
 
     @staticmethod
@@ -234,7 +234,7 @@ class SetupManager:
                     pass
             return {"ok": bool(document) or bool(devices), "devices": devices,
                     "selected_udid": self.config.get("udid"), "error": probe["stderr"] if not probe["ok"] else None,
-                    "next_steps": [] if devices else ["Connect iPhone by USB, unlock it, accept Trust This Computer yourself and open Xcode Devices and Simulators."]}
+                    "next_steps": [] if devices else ["Conecta el iPhone por USB, desbloquéalo, acepta tú Trust This Computer y abre Devices and Simulators en Xcode."]}
         finally:
             with contextlib.suppress(OSError):
                 os.unlink(name)
@@ -247,7 +247,7 @@ class SetupManager:
                 document = json.loads(response.read(1024 * 1024))
             value = document.get("value", {})
             return {"reachable": True, "ready": value.get("ready") is True, "wda": value,
-                    "next_step": "Run MCP session + source smoke check before declaring the phone usable."}
+                    "next_step": "Ejecuta la comprobación de sesión MCP y de source antes de dar el iPhone por usable."}
         except (OSError, ValueError, urllib.error.URLError) as error:
             return {"reachable": False, "ready": False, "error": _redact(error)}
 
@@ -258,7 +258,7 @@ class SetupManager:
 
     def doctor(self):
         binaries = {name: shutil.which(name) for name in ("xcodebuild", "xcrun", "git", "node", "npm")}
-        xcode = _run(["xcodebuild", "-version"]) if binaries["xcodebuild"] else {"ok": False, "stdout": "", "stderr": "Full Xcode is required."}
+        xcode = _run(["xcodebuild", "-version"]) if binaries["xcodebuild"] else {"ok": False, "stdout": "", "stderr": "Hace falta el Xcode completo."}
         developer_dir = _run(["xcode-select", "-p"])
         node_version = _run(["node", "--version"])["stdout"].strip() if binaries["node"] else ""
         npm_version = _run(["npm", "--version"])["stdout"].strip() if binaries["npm"] else ""
@@ -280,28 +280,28 @@ class SetupManager:
             checks["pinned_source"] = False
         next_steps = []
         if not checks["full_xcode"]:
-            next_steps.append("Install full Xcode, launch it to accept its license and install components, then select that Xcode with xcode-select.")
+            next_steps.append("Instala el Xcode completo, ábrelo para aceptar la licencia e instalar componentes, y selecciónalo con xcode-select.")
         if not checks["node"] or not checks["npm"]:
-            next_steps.append("Install Node.js 20.19+ / 22.12+ / 24+ with npm 10+ for the loopback USB forward.")
+            next_steps.append("Instala Node.js 20.19+ / 22.12+ / 24+ con npm 10+ para el reenvío USB en loopback.")
         if not checks["configured"]:
-            next_steps.append("Discover the device, then configure its explicit UDID, your Apple Team ID and a unique reverse-DNS bundle ID.")
+            next_steps.append("Descubre el iPhone y configura su UDID explícito, tu Team ID de Apple y un bundle ID único en DNS inverso.")
         if config and not chosen:
-            next_steps.append("Reconnect the selected iPhone by USB and confirm its UDID in Xcode Devices and Simulators.")
+            next_steps.append("Reconecta por USB el iPhone seleccionado y confirma su UDID en Xcode Devices and Simulators.")
         if not checks["paired"]:
-            next_steps.append("Unlock the iPhone and accept Trust This Computer yourself; verify pairing in Xcode.")
+            next_steps.append("Desbloquea el iPhone y acepta tú Trust This Computer; comprueba el emparejamiento en Xcode.")
         if not checks["developer_mode"]:
-            next_steps.append("Enable iPhone Settings > Privacy & Security > Developer Mode, restart and confirm it yourself.")
+            next_steps.append("Activa en el iPhone Settings > Privacy & Security > Developer Mode, reinicia y confírmalo tú mismo.")
         if not checks["pinned_source"]:
-            next_steps.append("Run fetch for the isolated pinned Appium WDA source, or reuse an unchanged checkout at the pinned commit.")
-        next_steps.extend(["In Xcode Settings > Accounts, sign in yourself and select your signing team; do not share passwords or verification codes.",
-                           "Keep the phone unlocked and awake. Enable Settings > Developer > Enable UI Automation; trust the development certificate in VPN & Device Management if iOS requests it."])
+            next_steps.append("Ejecuta fetch para la fuente aislada y fijada de WebDriverAgent de Appium, o reutiliza un checkout sin cambios en el commit fijado.")
+        next_steps.extend(["En Xcode Settings > Accounts, inicia sesión tú y elige tu equipo de firma; no compartas contraseñas ni códigos de verificación.",
+                           "Mantén el iPhone desbloqueado y activo. Activa Settings > Developer > Enable UI Automation y, si iOS lo pide, confía en el certificado de desarrollo en VPN & Device Management."])
         live = self._probe_status()
         profile = self._profile_status()
         if profile.get("expired"):
-            next_steps.append("The built provisioning profile has expired. Refresh your Xcode signing account and build again before start.")
+            next_steps.append("El perfil de aprovisionamiento compilado ha caducado. Actualiza la cuenta de firma de Xcode y vuelve a compilar antes de start.")
         mirroring = self.mirroring_running()
         if mirroring:
-            next_steps.append("Quit iPhone Mirroring if the phone shows the Mac-in-use lock screen or WDA has an empty accessibility tree, then verify READY again.")
+            next_steps.append("Cierra iPhone Mirroring si el iPhone muestra la pantalla de bloqueo de uso del Mac o WebDriverAgent tiene un árbol de accesibilidad vacío, y comprueba READY otra vez.")
         return {"ok": all(checks.values()), "checks": checks, "devices": discovery["devices"],
                 "iphone_mirroring_running": mirroring,
                 "selected_device": chosen, "xcode_version": xcode["stdout"].strip(),
@@ -311,21 +311,21 @@ class SetupManager:
                 "wda_version": WDA_VERSION, "wda_commit": WDA_COMMIT, "runtime": str(self.state_dir),
                 "service": live, "next_steps": next_steps,
                 "manual_checks": {"apple_account_login": "user_check_required", "certificate_trust": "user_check_required", "phone_unlocked": "user_check_required"},
-                "signing_note": "Personal Team has a limited number of development apps (typically 3) and short-lived provisioning (typically 7 days). Never uninstall unrelated apps automatically."}
+                "signing_note": "Personal Team tiene un número limitado de apps de desarrollo (normalmente 3) y un aprovisionamiento de corta duración (normalmente 7 días). Nunca desinstales apps ajenas de forma automática."}
 
     def _profile_status(self):
         profiles = list((self.state_dir / "derived_data/Build/Products").glob("Debug-iphoneos/*.app/embedded.mobileprovision"))
         if not profiles:
-            return {"known": False, "note": "No built provisioning profile yet; Xcode signing and phone certificate trust require user verification."}
+            return {"known": False, "note": "Aún no hay un perfil de aprovisionamiento compilado; la firma de Xcode y la confianza del certificado en el iPhone las debe verificar la persona."}
         profile = max(profiles, key=lambda path: path.stat().st_mtime)
         decoded = _run(["security", "cms", "-D", "-i", str(profile)], timeout=5)
         try:
             values = plistlib.loads(decoded["stdout"].encode())
             expiration = values["ExpirationDate"].replace(tzinfo=dt.timezone.utc)
             return {"known": True, "expires_at": expiration.isoformat(), "expired": expiration <= dt.datetime.now(dt.timezone.utc),
-                    "note": "Provisioning expiry does not verify iPhone certificate trust or Apple account login."}
+                    "note": "La caducidad del aprovisionamiento no comprueba la confianza del certificado en el iPhone ni el inicio de sesión de la cuenta de Apple."}
         except (ValueError, KeyError, AttributeError):
-            return {"known": False, "note": "Could not decode the built provisioning profile; verify signing in Xcode."}
+            return {"known": False, "note": "No se pudo decodificar el perfil de aprovisionamiento compilado; verifica la firma en Xcode."}
 
     def _owned(self, job, *, base_url=None):
         pid = job.get("pid")
@@ -396,7 +396,7 @@ class SetupManager:
     def _require_build(self, config):
         marker = _read_json(self.state_dir / "build.json", {})
         if marker.get("config_fingerprint") != _fingerprint(config) or marker.get("commit") != WDA_COMMIT:
-            raise ValueError("Run build successfully for this configuration before start; start uses test-without-building.")
+            raise ValueError("Ejecuta build con éxito para esta configuración antes de start; start usa test-without-building.")
 
     @staticmethod
     def _publishing_pid(job):
@@ -440,7 +440,7 @@ class SetupManager:
                             and (self._publishing_pid(job) or self._owned(job, base_url=self.base_url))):
                         return {"ok": True, "job_id": job["id"], "already_running": True,
                                 "job": self._job_status(job), "recovery": {"state": job["state"], "job_id": job["id"], "recovery_of": job.get("recovery_of")},
-                                "next_steps": ["Poll pua_setup status with this job_id, then verify pua_ready again. Do not queue another restart."]}
+                                "next_steps": ["Sondea pua_setup status con este job_id y vuelve a comprobar pua_ready. No encoles otro reinicio."]}
                 for job in reversed(recoveries):
                     try:
                         last_attempt = max(dt.datetime.fromisoformat(job[key].replace("Z", "+00:00"))
@@ -449,24 +449,24 @@ class SetupManager:
                     except (ValueError, TypeError, KeyError, AttributeError):
                         continue
                     if 0 <= elapsed < RECOVERY_COOLDOWN_SECONDS:
-                        return {"ok": False, "error": "A recent recovery attempt is still within the restart cooldown.",
+                        return {"ok": False, "error": "Un intento de recuperación reciente sigue dentro de la espera entre reinicios.",
                                 "job_id": job["id"], "job": self._job_status(job),
                                 "recovery": {"state": "cooldown", "job_id": job["id"], "retry_after_seconds": max(1, int(RECOVERY_COOLDOWN_SECONDS - elapsed + 1))},
-                                "next_steps": ["Inspect the recovery job and its log, unlock the iPhone and check Developer Mode / Enable UI Automation. Do not repeatedly restart WDA."]}
+                                "next_steps": ["Revisa el trabajo de recuperación y su registro, desbloquea el iPhone y comprueba Developer Mode y Enable UI Automation. No reinicies WebDriverAgent en bucle."]}
                 targets = [job for job in jobs if (job.get("action") == "start" or
                                                   (job.get("action") == "recover" and job.get("recovery_phase") == "serving"))
                            and job.get("state") in ACTIVE_STATES
                            and self._matching_job(job, config) and self._owns_listener(job)]
                 if len(targets) != 1:
-                    return {"ok": False, "error": "The current WDA listener is not uniquely owned by a matching live plugin start job; automatic recovery refused.",
+                    return {"ok": False, "error": "El listener actual de WebDriverAgent no pertenece de forma única a un trabajo start vivo y coincidente de este plugin; se rechazó la recuperación automática.",
                             "recovery": {"state": "manual"},
-                            "next_steps": ["Preserve external WDA services. Ask their owner to restart them, or inspect pua_setup status and start a service owned by this plugin."]}
+                            "next_steps": ["Conserva los servicios externos de WebDriverAgent. Pide a su dueño que los reinicie, o revisa pua_setup status e inicia un servicio propio de este plugin."]}
                 self._source(config)
                 self._require_build(config)
                 if sys.platform != "darwin" or not all(shutil.which(name) for name in ("xcodebuild", "node", "npm")):
-                    raise ValueError("Recovery requires macOS, full Xcode and supported Node.js / npm.")
+                    raise ValueError("La recuperación exige macOS, el Xcode completo y un Node.js / npm admitidos.")
                 if not _node_supported(_run(["node", "--version"])["stdout"]):
-                    raise ValueError("USB forwarding requires Node.js 20.19+ / 22.12+ / 24+; update Node.js before recovery.")
+                    raise ValueError("El reenvío USB exige Node.js 20.19+ / 22.12+ / 24+; actualiza Node.js antes de la recuperación.")
                 target = targets[0]
                 snapshot = {key: target.get(key) for key in ("id", "pid", "owner_token", "worker_entrypoint")}
                 snapshot.update(config_fingerprint=_fingerprint(config), base_url=self.base_url)
@@ -476,7 +476,7 @@ class SetupManager:
                 return result
         except (ValueError, OSError, KeyError) as error:
             return {"ok": False, "error": _redact(error), "recovery": {"state": "manual"},
-                    "next_steps": _diagnose(str(error)) or ["Inspect pua_setup status and correct the reported prerequisite before recovery."]}
+                    "next_steps": _diagnose(str(error)) or ["Revisa pua_setup status y corrige el requisito indicado antes de la recuperación."]}
 
     def _group_running(self, group, timeout=2):
         members = _run(["ps", "-ax", "-o", "pid=,pgid=,stat="], timeout=timeout)
@@ -503,34 +503,34 @@ class SetupManager:
                 or _fingerprint(self.config) != _fingerprint(job["config"])
                 or snapshot.get("config_fingerprint") != _fingerprint(job["config"])
                 or snapshot.get("base_url") != self.base_url or not self._owns_listener(target)):
-            raise ValueError("Recovery target ownership or listener changed; no process was signalled.")
+            raise ValueError("Cambió la propiedad o el listener del objetivo de recuperación; no se señaló ningún proceso.")
         os.killpg(target["pid"], signal.SIGTERM)
         deadline = time.monotonic() + 10
         while time.monotonic() < deadline:
             listeners = self._listener_pids(timeout=min(3, max(0.01, deadline - time.monotonic())))
             if listeners is None:
-                raise ValueError("Cannot verify the old listener exited; recovery will not start another forward.")
+                raise ValueError("No se puede comprobar que el listener anterior haya salido; la recuperación no iniciará otro reenvío.")
             if not listeners and time.monotonic() < deadline and not self._group_running(target["pid"], timeout=min(2, max(0.01, deadline - time.monotonic()))):
                 return
             if listeners:
                 try:
                     if any(os.getpgid(pid) != target["pid"] for pid in listeners):
-                        raise ValueError("Another service now owns the port; recovery preserved it and stopped.")
+                        raise ValueError("Otro servicio es ahora dueño del puerto; la recuperación lo conservó y se detuvo.")
                 except ProcessLookupError:
                     pass
             time.sleep(min(0.1, max(0, deadline - time.monotonic())))
-        raise ValueError("The owned WDA group or listener did not exit within 10 seconds; recovery stopped without killing other processes.")
+        raise ValueError("El grupo o el listener propio de WebDriverAgent no salió en 10 segundos; la recuperación se detuvo sin matar otros procesos.")
 
     def _job_path(self, job_id):
         if not isinstance(job_id, str) or not re.fullmatch(r"[a-f0-9]{32}", job_id):
-            raise ValueError("job_id must be the ID returned by a setup job.")
+            raise ValueError("job_id debe ser el ID que devolvió un trabajo de setup.")
         return self.state_dir / "jobs" / (job_id + ".json")
 
     def _job_status(self, job):
         result = dict(job)
         if job.get("state") in ACTIVE_STATES and not (self._publishing_pid(job) or self._owned(job)):
             result["state"] = "interrupted"
-            result["error"] = "The recorded worker no longer exists or its ownership cannot be verified. Start a new job; no unrelated process was signalled."
+            result["error"] = "El worker registrado ya no existe o no se puede verificar su propiedad. Inicia un trabajo nuevo; no se señaló ningún proceso ajeno."
         log = self.state_dir / "logs" / (job["id"] + ".log")
         try:
             with log.open("rb") as stream:
@@ -561,7 +561,7 @@ class SetupManager:
                     continue
                 if action == "start" and job["action"] == "start":
                     return {"ok": True, "already_running": True, "job": self._job_status(job)}
-                raise ValueError(f"An owned {job['action']} job is already running. Check status or stop that job before {action}.")
+                raise ValueError(f"Ya hay un trabajo {job['action']} propio en ejecución. Revisa status o detén ese trabajo antes de {action}.")
         job_id = uuid.uuid4().hex
         job = {"id": job_id, "action": action, "state": "queued", "created_at": _now(),
                "owner_token": uuid.uuid4().hex, "pid": None, "config": config,
@@ -583,7 +583,7 @@ class SetupManager:
         except OSError as error:
             job.update(state="failed", error=_redact(error), completed_at=_now())
             _write_json(path, job)
-        return {"ok": job["state"] != "failed", "job_id": job_id, "job": self._job_status(job), "next_step": "Poll setup status with this job_id; do not block MCP waiting for Xcode."}
+        return {"ok": job["state"] != "failed", "job_id": job_id, "job": self._job_status(job), "next_step": "Sondea el estado de setup con este job_id; no bloquees MCP esperando a Xcode."}
 
     def _build_command(self, config, action):
         return ["xcodebuild", "-project", str(Path(config["source_dir"]) / "WebDriverAgent.xcodeproj"),
@@ -596,9 +596,9 @@ class SetupManager:
         wait_seconds = args.pop("wait_seconds", 20 if action == "start" else 0)
         if (isinstance(wait_seconds, bool) or not isinstance(wait_seconds, (int, float))
                 or not 0 <= wait_seconds <= 30):
-            return {"ok": False, "error": "wait_seconds must be between 0 and 30."}
+            return {"ok": False, "error": "wait_seconds debe estar entre 0 y 30."}
         if wait_seconds and action not in ("start", "status"):
-            return {"ok": False, "error": "wait_seconds is only supported for start/status."}
+            return {"ok": False, "error": "wait_seconds solo se admite en start y status."}
         result = self._setup_once(action, **args)
         if not result.get("ok") or not wait_seconds:
             return result
@@ -630,15 +630,15 @@ class SetupManager:
                 result.update(job_id=job_id, job=job)
             else:
                 result.update(jobs=status["jobs"])
-            result["next_step"] = ("Run pua_ready to verify the full phone channel." if reason == "service_ready"
-                                   else "Inspect this job's failure/logs." if reason == "job_finished"
-                                   else "Query status with the same job_id and wait_seconds=20; do not start again.")
+            result["next_step"] = ("Ejecuta pua_ready para comprobar el canal completo del iPhone." if reason == "service_ready"
+                                   else "Revisa el fallo y los registros de este trabajo." if reason == "job_finished"
+                                   else "Consulta status con el mismo job_id y wait_seconds=20; no inicies otra vez.")
             return result
 
     def _setup_once(self, action, **args):
         allowed = {"discover", "fetch", "configure", "build", "start", "stop", "status"}
         if action not in allowed:
-            return {"ok": False, "error": "Unsupported setup action.", "actions": sorted(allowed)}
+            return {"ok": False, "error": "Acción de setup no admitida.", "actions": sorted(allowed)}
         try:
             with self._lock():
                 if action == "discover":
@@ -648,7 +648,7 @@ class SetupManager:
                     if job_id:
                         job = _read_json(self._job_path(job_id))
                         if not job:
-                            raise ValueError("Unknown job_id.")
+                            raise ValueError("job_id desconocido.")
                         jobs = [job]
                     else:
                         jobs = self._jobs()[-6:]
@@ -659,7 +659,7 @@ class SetupManager:
                     job_id = args.get("job_id")
                     jobs = [_read_json(self._job_path(job_id))] if job_id else self._jobs()
                     if job_id and not jobs[0]:
-                        raise ValueError("Unknown job_id.")
+                        raise ValueError("job_id desconocido.")
                     stopped, unowned = [], []
                     for job in jobs:
                         if job.get("state") not in ACTIVE_STATES:
@@ -670,13 +670,13 @@ class SetupManager:
                         else:
                             unowned.append(job["id"])
                     return {"ok": True, "stopped_jobs": stopped, "unverified_jobs_preserved": unowned,
-                            "note": "Only owned worker process groups were signalled. No apps were uninstalled."}
+                            "note": "Solo se señaló a los grupos de procesos de workers propios. No se desinstaló ninguna app."}
                 if action == "configure":
                     if any(job.get("state") in ACTIVE_STATES and self._owned(job) for job in self._jobs()):
-                        raise ValueError("Stop the owned job before changing its configuration.")
+                        raise ValueError("Detén el trabajo propio antes de cambiar su configuración.")
                     allowed_args = {"udid", "team_id", "bundle_id", "source_dir", "local_port", "device_port"}
                     if set(args) - allowed_args:
-                        raise ValueError("Unknown configure arguments: " + ", ".join(sorted(set(args) - allowed_args)))
+                        raise ValueError("Argumentos de configure desconocidos: " + ", ".join(sorted(set(args) - allowed_args)))
                     config = {"udid": args.get("udid"), "team_id": args.get("team_id"), "bundle_id": args.get("bundle_id"),
                               "source_dir": str(Path(args.get("source_dir") or self.state_dir / "runtime/WebDriverAgent").expanduser().resolve()),
                               "local_port": args.get("local_port", self.port), "device_port": args.get("device_port", 8100)}
@@ -684,9 +684,9 @@ class SetupManager:
                     if args.get("source_dir"):
                         self._source(config)
                     _write_json(self.state_dir / "config.json", config)
-                    return {"ok": True, "config": config, "next_step": "Run fetch if source is missing, then build. Xcode handles Apple signing with your existing account."}
+                    return {"ok": True, "config": config, "next_step": "Ejecuta fetch si falta la fuente y luego build. Xcode firma con Apple usando tu cuenta actual."}
                 if args:
-                    raise ValueError(f"{action} takes no arguments; use configure first.")
+                    raise ValueError(f"{action} no admite argumentos; usa configure antes.")
                 config = self.config
                 if action == "fetch":
                     # Fetch is also useful before device/signing configuration.
@@ -694,17 +694,17 @@ class SetupManager:
                 self._validate_config(config)
                 self._source(config)
                 if sys.platform != "darwin" or not shutil.which("xcodebuild"):
-                    raise ValueError("Building and starting WDA requires macOS with full Xcode.")
+                    raise ValueError("Compilar e iniciar WebDriverAgent exige macOS con el Xcode completo.")
                 if action == "start":
                     healthy = self._probe_status()
                     if healthy["ready"]:
                         return {"ok": True, "already_ready": True, "service": healthy,
-                                "note": "Reusing reachable WDA. This plugin does not own or stop that external service."}
+                                "note": "Se reutiliza un WebDriverAgent alcanzable. Este plugin no es dueño de ese servicio externo ni lo detiene."}
                     self._require_build(config)
                     if not shutil.which("node") or not shutil.which("npm"):
-                        raise ValueError("Install supported Node.js and npm for the USB forward.")
+                        raise ValueError("Instala un Node.js y un npm admitidos para el reenvío USB.")
                     if not _node_supported(_run(["node", "--version"])["stdout"]):
-                        raise ValueError("USB forwarding requires Node.js 20.19+ / 22.12+ / 24+; update Node.js before start.")
+                        raise ValueError("El reenvío USB exige Node.js 20.19+ / 22.12+ / 24+; actualiza Node.js antes de start.")
                     with socket.socket() as probe:
                         # Node listeners use address reuse. A recently stopped
                         # owned forward can leave connections in TIME_WAIT;
@@ -714,7 +714,7 @@ class SetupManager:
                         try:
                             probe.bind(("127.0.0.1", config["local_port"]))
                         except OSError:
-                            raise ValueError("Local forward port is occupied and WDA is not ready. Do not kill unrelated processes; configure another MCP loopback URL or stop an owned job.")
+                            raise ValueError("El puerto local de reenvío está ocupado y WebDriverAgent no está listo. No mates procesos ajenos; configura otra URL loopback de MCP o detén un trabajo propio.")
                 return self._create_job(action, config)
         except (ValueError, OSError, KeyError) as error:
             return {"ok": False, "error": _redact(error), "next_steps": _diagnose(str(error))}
@@ -771,14 +771,14 @@ def _worker(state_dir, job_id, owner_token, base_url):
 
     def run(argv, cwd=None):
         if stopping:
-            raise InterruptedError("Stopped by owner request.")
+            raise InterruptedError("Detenido a petición del dueño.")
         print("Running:", _redact(" ".join(argv)), flush=True)
         child = launch(argv, cwd)
         code = child.wait()
         if stopping:
-            raise InterruptedError("Stopped by owner request.")
+            raise InterruptedError("Detenido a petición del dueño.")
         if code:
-            raise RuntimeError(f"{Path(argv[0]).name} exited with code {code}; inspect the redacted log tail.")
+            raise RuntimeError(f"{Path(argv[0]).name} salió con el código {code}; revisa el final redactado del registro.")
 
     try:
         action, config = job["action"], job["config"]
@@ -796,7 +796,7 @@ def _worker(state_dir, job_id, owner_token, base_url):
                 dirty = _run(["git", "-C", str(source), "status", "--porcelain", "--untracked-files=no"])
                 origin = _run(["git", "-C", str(source), "remote", "get-url", "origin"])
                 if not dirty["ok"] or dirty["stdout"].strip() or not origin["ok"] or origin["stdout"].strip() != WDA_REPOSITORY:
-                    raise ValueError("Owned runtime checkout is modified or has a different origin. Preserve it and select a new external runtime state directory before fetching again.")
+                    raise ValueError("El checkout de runtime propio está modificado o tiene otro origen. Consérvalo y elige un directorio de estado externo nuevo antes de volver a fetch.")
                 run(["git", "-C", str(source), "fetch", "--depth", "1", "origin", WDA_COMMIT])
                 run(["git", "-C", str(source), "checkout", "--detach", "FETCH_HEAD"])
                 manager._source({"source_dir": str(source)})
@@ -832,7 +832,7 @@ def _worker(state_dir, job_id, owner_token, base_url):
                 forward_child = launch(["node", str(forward / "forward.mjs"), config["udid"], str(config["local_port"]), str(config["device_port"])])
                 time.sleep(0.15)
                 if forward_child.poll() is not None:
-                    raise RuntimeError("USB forward failed to start; inspect the log tail.")
+                    raise RuntimeError("El reenvío USB no arrancó; revisa el final del registro.")
                 xcode = launch(manager._build_command(config, "test-without-building"), source)
                 next_status_probe = 0
                 # Keep both children owned and watch either side fail.
@@ -847,10 +847,10 @@ def _worker(state_dir, job_id, owner_token, base_url):
                         next_status_probe = time.monotonic() + 1
                     time.sleep(0.25)
                 if stopping:
-                    raise InterruptedError("Stopped by owner request.")
-                raise RuntimeError("WDA runner or USB forward exited; inspect the log tail and start again.")
+                    raise InterruptedError("Detenido a petición del dueño.")
+                raise RuntimeError("El runner de WebDriverAgent o el reenvío USB salieron; revisa el final del registro e inicia otra vez.")
         else:
-            raise ValueError("Unsupported worker action.")
+            raise ValueError("Acción de worker no admitida.")
         job.update(state="succeeded", completed_at=_now())
     except InterruptedError as error:
         job.update(state="stopped", completed_at=_now(), error=str(error))
@@ -892,7 +892,7 @@ def _worker(state_dir, job_id, owner_token, base_url):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Manage pinned WDA without arbitrary shell commands.")
+    parser = argparse.ArgumentParser(description="Gestiona el WebDriverAgent fijado, sin comandos de shell arbitrarios.")
     parser.add_argument("--state-dir", type=Path)
     parser.add_argument("--base-url", default="http://127.0.0.1:18100")
     parser.add_argument("--worker", nargs=3, metavar=("STATE_DIR", "JOB_ID", "OWNER_TOKEN"), help=argparse.SUPPRESS)

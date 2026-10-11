@@ -161,7 +161,7 @@ class AppTests(unittest.TestCase):
         with patch.object(wda_apps, "fetch_apple", side_effect=AssertionError("must not request")):
             result = self.catalog.lookup("招商银行", source="apple")
         self.assertFalse(result["ok"])
-        self.assertIn("budget", result["warnings"][0])
+        self.assertIn("límite", result["warnings"][0])
 
     def test_failed_explicit_lookup_is_mcp_error_but_empty_success_is_not(self):
         from iphone_use import result_content

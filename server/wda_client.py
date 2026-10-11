@@ -27,7 +27,7 @@ class WDAClient:
     def __init__(self, base_url="http://127.0.0.1:18100", timeout=15):
         parsed = urlsplit(base_url)
         if parsed.scheme != "http" or parsed.hostname not in ("127.0.0.1", "localhost", "::1") or parsed.path not in ("", "/") or parsed.username or parsed.query or parsed.fragment:
-            raise ValueError("PUA URL must be a local HTTP endpoint; forward USB to loopback first.")
+            raise ValueError("La URL de PUA debe ser un extremo HTTP local; reenvía el USB a loopback antes.")
         self.host, self.port = parsed.hostname, parsed.port or 80
         self.timeout, self.connection, self.session_id = timeout, None, None
         self._settings_session_id, self._settings_error = None, None
@@ -57,7 +57,7 @@ class WDAClient:
     def remaining(deadline):
         budget = deadline - time.monotonic()
         if budget <= 0:
-            raise WDAError("pua_unreachable", "PUA read deadline expired; no phone action was replayed.")
+            raise WDAError("pua_unreachable", "Venció el plazo de lectura de PUA; no se repitió ninguna acción del iPhone.")
         return budget
 
     def request(self, method, path, payload=None, timeout=None):
@@ -114,19 +114,19 @@ class WDAClient:
             # Mark the completed response closed so HTTPConnection can reuse its socket.
             response.close()
             if len(raw) > 24 * 1024 * 1024:
-                raise WDAError("response_too_large", "PUA response exceeds 24 MiB.", uncertain=not readonly)
+                raise WDAError("response_too_large", "La respuesta de PUA supera 24 MiB.", uncertain=not readonly)
             try:
                 result = json.loads(raw)
             except (ValueError, UnicodeDecodeError) as exc:
-                raise WDAError("invalid_response", "PUA returned invalid JSON.", uncertain=not readonly) from exc
+                raise WDAError("invalid_response", "PUA devolvió un JSON no válido.", uncertain=not readonly) from exc
             if not isinstance(result, dict):
-                raise WDAError("invalid_response", "PUA returned a non-object.", uncertain=not readonly)
+                raise WDAError("invalid_response", "PUA devolvió un valor que no es un objeto.", uncertain=not readonly)
             value = result.get("value")
             if isinstance(value, dict) and value.get("error"):
                 code = value["error"]
                 raise WDAError(code, value.get("message", code)[:1500])
             if status >= 400:
-                raise WDAError("http_error", f"PUA returned HTTP {status}.", uncertain=not readonly)
+                raise WDAError("http_error", f"PUA devolvió HTTP {status}.", uncertain=not readonly)
             return result
         except WDAError as exc:
             code = exc.code
@@ -136,8 +136,8 @@ class WDAClient:
         except (OSError, socket.timeout, http.client.HTTPException) as exc:
             self.close()
             code = "pua_unreachable" if readonly else "action_uncertain"
-            message = ("PUA read connection failed or timed out; no phone action was executed." if readonly
-                       else "PUA connection failed or timed out. Read fresh state before deciding whether to repeat an action.")
+            message = ("La conexión de lectura de PUA falló o agotó el tiempo; no se ejecutó ninguna acción del iPhone." if readonly
+                       else "La conexión de PUA falló o agotó el tiempo. Lee el estado reciente antes de decidir si repites una acción.")
             raise WDAError(code, message, uncertain=not readonly) from exc
         finally:
             # No text, predicates, values, screenshots, app IDs or device identifiers in metrics.
@@ -164,7 +164,7 @@ class WDAClient:
             value = result.get("value") or {}
             self.session_id = result.get("sessionId") or value.get("sessionId")
             if not self.session_id:
-                raise WDAError("invalid_response", "PUA did not return a session ID.")
+                raise WDAError("invalid_response", "PUA no devolvió un ID de sesión.")
             created = True
         if self.session_id != self._settings_session_id:
             # These settings are supported by the pinned WDA's FBSettingsHandler.
@@ -220,4 +220,4 @@ class WDAClient:
                 "endpoints": {k: {"count": len(v), "seconds": round(sum(r["seconds"] for r in v),4),
                                   "max_seconds": max(r["seconds"] for r in v), "bytes": sum(r["bytes"] for r in v)}
                               for k,v in endpoints.items()},
-                "measurement": "Transport time and response bytes only; model, host scheduling and user wait are outside this process."}
+                "measurement": "Solo tiempo de transporte y bytes de respuesta; el modelo, la planificación del host y la espera de la persona quedan fuera de este proceso."}

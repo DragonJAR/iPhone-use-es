@@ -1,6 +1,6 @@
-# AirDrop 文件传回 Mac
+# Devolver archivos al Mac con AirDrop
 
-手机里的图片、视频、文档等需要在 Mac 上读取、处理或交付时，可用 PUA 操作所在 App 的共享 / 导出菜单，通过 AirDrop 传回当前 Mac。
+Cuando una imagen, un vídeo, un documento u otro archivo del iPhone deba leerse, procesarse o entregarse en el Mac, se puede usar PUA para abrir el menú de compartir o exportar de la app y enviarlo al Mac actual por AirDrop.
 
-1. 在手机选择所需文件或照片 → 共享 → AirDrop → 当前 Mac。设备名不清楚时可用 `scutil --get ComputerName` 查看；Mac 出现接收提示时接受。
-2. 发送后，到 `~/Downloads` 按最近时间找到收到的文件或文件夹，用绝对路径直接读取、处理或交付。
+1. En el iPhone, elige el archivo o la foto necesarios → «共享» → AirDrop → el Mac actual. Si el nombre del equipo no está claro, consúltalo con `scutil --get ComputerName`; acepta el aviso de recepción cuando aparezca en el Mac.
+2. Después del envío, entra en `~/Downloads`, localiza por la hora más reciente el archivo o la carpeta recibidos y léelos, procésalos o entréalos usando la ruta absoluta.

@@ -62,10 +62,10 @@ def model_image(source, quality=JPEG_QUALITY, timeout=10):
             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             timeout=timeout, check=False)
         if completed.returncode != 0 or not destination.is_file() or destination.stat().st_size < 4:
-            raise OSError("sips did not produce an image")
+            raise OSError("sips no produjo una imagen")
         with destination.open("rb") as stream:
             if stream.read(2) != b"\xff\xd8":
-                raise OSError("sips output is not JPEG")
+                raise OSError("la salida de sips no es JPEG")
         destination.chmod(0o600)
         return destination, "image/jpeg", target[0], target[1]
     except (OSError, subprocess.SubprocessError):

@@ -1,55 +1,55 @@
-# 查找真实 app bundle ID
+# Buscar el bundle ID real de una app
 
-已经知道且核验过的 bundle ID 可直接启动，不为每次 launch 重查安装清单。查常用 App 可先用 `pua_apps(source="catalog")` 离线检索本地目录；未知应用或需要区分用户实际安装的版本时用 source=auto，先查选定 iPhone 的已安装应用，再查本地目录，仍无候选才查 Apple。不要凭品牌名拼写 bundle ID，也不要连续试多个猜测值。
+Un bundle ID que ya se conoce y se ha verificado se puede lanzar directamente; no vuelvas a consultar el inventario de instalación en cada launch. Para una app habitual, busca primero sin red el directorio local con `pua_apps(source="catalog")`. Para una app desconocida, o cuando haya que distinguir la versión que el usuario tiene instalada de verdad, usa source=auto: primero las apps instaladas en el iPhone seleccionado, después el directorio local, y solo si sigue sin haber candidatos consulta Apple. No inventes un bundle ID a partir del nombre de la marca ni pruebes varios valores adivinados uno tras otro.
 
 ```json
 {"query":"招商银行","source":"auto"}
 ```
 
-本例应返回 `com.cmbchina.MPBBank`。检查名称、发布者和候选来源后，把 bundle_id 传给 `pua_launch_app`。正常启动乐观继续；下一步需要未知页面信息时在该次 launch 设置 observe，顺带查看实际前台和目标页，不另加默认启动验收。招商银行主应用与掌上生活信用卡应用是两个应用。
+Este ejemplo debe devolver `com.cmbchina.MPBBank`. Después de revisar el nombre, el editor y el origen del candidato, pasa bundle_id a `pua_launch_app`. Un arranque normal continúa con optimismo. Si el paso siguiente necesita información de una página desconocida, pon observe en ese mismo launch y mira de paso el primer plano real y la página de destino; no añadas una comprobación de arranque por defecto. La app principal 招商银行 y la app de tarjeta 掌上生活 son dos aplicaciones.
 
-- `source=auto`：先读取已选设备的安装列表（本地缓存 300 秒），合并本地目录。精确名称/别名优先；精确匹配存在时不混入子串候选。无本地候选才调用 Apple。
-- `source=installed`：只查已选 iPhone，缺少选定设备或读取失败时返回可执行的诊断。英文品牌别名可用本地目录映射到安装列表的 bundle ID。
-- `source=catalog`：离线查本文件和 `apps.json` 中 36 个经过 Apple 查询核验的应用。完全不查询 iPhone 或网络。
-- `source=apple`：查询指定 App Store 国家/地区的 Apple 公共 API，默认 `country=cn`，可指定 `hk`、`us` 等。返回商店候选，不意味着安装在用户手机上。
+- `source=auto`: lee primero la lista de instalación del dispositivo seleccionado (caché local de 300 segundos) y la fusiona con el directorio local. El nombre o el alias exactos tienen prioridad; si hay una coincidencia exacta, no se mezclan candidatos por subcadena. Solo si no hay candidato local se llama a Apple.
+- `source=installed`: consulta solo el iPhone seleccionado. Si falta el dispositivo seleccionado o la lectura falla, devuelve un diagnóstico que se puede ejecutar. Un alias de marca en inglés puede mapearse, mediante el directorio local, al bundle ID de la lista de instalación.
+- `source=catalog`: consulta sin red este archivo y las 36 apps de `apps.json` ya contrastadas con una consulta a Apple. No consulta en absoluto el iPhone ni la red.
+- `source=apple`: consulta la API pública de Apple para el país o la región de App Store indicados. Por defecto `country=cn`; se pueden indicar `hk`, `us` y otros. Devuelve candidatos de la tienda, lo que no significa que estén instalados en el teléfono del usuario.
 
-`installed_verified=true` 表示选定设备安装列表确认了候选，`installation_checked` 表示本次查询是否成功获取过安装列表（最多缓存五分钟）；false 不能独立解释为未安装。候选中 `verified_at` 是来源核验时间。查询只返回匹配应用，不回传整份设备清单。设备安装清单和缓存保存在仓库外的私有状态目录，权限为 600；不会将设备信息或安装清单发送给 Apple。
+`installed_verified=true` significa que la lista de instalación del dispositivo seleccionado confirmó el candidato. `installation_checked` indica si esta consulta llegó a obtener la lista de instalación (caché de cinco minutos como máximo); false no se puede interpretar por sí solo como «no instalada». En el candidato, `verified_at` es la hora en que se verificó el origen. La consulta solo devuelve las apps que coinciden; no devuelve el inventario completo del dispositivo. El inventario de instalación y la caché se guardan en un directorio de estado privado fuera del repositorio, con permiso 600. No se envían a Apple la información del dispositivo ni el inventario de instalación.
 
-## Apple 官方 API
+## API oficial de Apple
 
-[Apple iTunes Search API 文档](https://performance-partners.apple.com/search-api) 说明了 `software`、国家/地区参数、JSON、缓存和约每分钟 20 次查询的指导限制。该公开接口查询 App Store 应用元数据，无需用户的 Apple ID、密码或 API 密钥：
+La [documentación de la Apple iTunes Search API](https://performance-partners.apple.com/search-api) describe `software`, el parámetro de país o región, JSON, la caché y el límite orientativo de unas 20 consultas por minuto. Esa interfaz pública consulta metadatos de apps del App Store y no necesita el Apple ID, la contraseña ni una clave de API del usuario:
 
 ```text
 https://itunes.apple.com/search?term=招商银行&country=cn&media=software&entity=software&limit=10
 https://itunes.apple.com/lookup?id=392899425&country=cn&entity=software
 ```
 
-先用名称搜索并核对实际发布者与产品，再用稳定的 `trackId` Lookup 刷新。官方文档说明 ID 查询误匹配更少；不要自动选名称搜索第一条。`pua_apps` 使用 URL 编码、5 秒网络超时、响应大小限制、Apple HTTPS 域名/路径和跳转限制、15 分钟缓存和每分钟最多 18 次新请求，避免长时间阻塞或重复撞限流。刷新脚本按地区批量 Lookup 已审核 ID。
+Busca primero por nombre y contrasta el editor y el producto reales; después refresca con un Lookup del `trackId` estable. La documentación oficial indica que la consulta por ID empareja mal con menos frecuencia. No elijas automáticamente el primer resultado de la búsqueda por nombre. `pua_apps` usa codificación de URL, un tiempo de espera de red de 5 segundos, un límite de tamaño de respuesta, restricciones de dominio, ruta y redirección HTTPS de Apple, una caché de 15 minutos y como máximo 18 peticiones nuevas por minuto, para no bloquearse mucho tiempo ni chocar una y otra vez con el límite. El script de refresco hace Lookup por lotes, por región, de los ID ya revisados.
 
 ```sh
-python3 scripts/update_app_catalog.py --search "应用名称" --country cn
+python3 scripts/update_app_catalog.py --search "nombre de la app" --country cn
 python3 scripts/update_app_catalog.py --refresh
 ```
 
-搜索只输出候选，不自动加入目录。维护者核对 App Store 页面、发布者和具体产品后再添加记录；刷新仅更新已有审核记录的商店元数据，缺失 ID 或 bundle ID 变化时停止并保留原目录。
+La búsqueda solo imprime candidatos; no los añade sola al directorio. Quien mantiene el catálogo contrasta la página del App Store, el editor y el producto concreto antes de añadir el registro. El refresco solo actualiza los metadatos de tienda de registros ya revisados; si falta un ID o cambia el bundle ID, se detiene y conserva el directorio original.
 
-## 范围与失败处理
+## Alcance y fallos
 
-Apple 商店搜索存在同名、地区和下架限制，企业内部、开发版或未上架应用可能不存在。[App Store Connect 的 bundleIds 接口](https://developer.apple.com/documentation/appstoreconnectapi/get-v1-bundleids) 只能列出开发者团队自身注册的 ID，不能当作所有第三方应用的目录。已安装设备列表是确认用户实际应用的更直接证据。
+La búsqueda de la tienda de Apple tiene límites por homónimos, región y apps retiradas. Una app interna de empresa, una compilación de desarrollo o una app que no está en la tienda pueden no existir. La [interfaz bundleIds de App Store Connect](https://developer.apple.com/documentation/appstoreconnectapi/get-v1-bundleids) solo puede listar los ID registrados por el propio equipo de desarrollador; no sirve como directorio de todas las apps de terceros. La lista de lo instalado en el dispositivo es la evidencia más directa de la app real del usuario.
 
-本次实测 `富途牛牛` 在 CN 搜索没有目标应用，在 HK 查询才取得 `cn.futu.FutuTraderPhone`。遇到空结果先查 `source=installed`，或按用户实际商店地区查询；不要把地区搜索不到解释为没有安装。飞书与国际版 Lark、微信与企业微信、普通版与极速版/开发版也应分别核对。
+En esta comprobación, `富途牛牛` no tenía la app de destino en la búsqueda de CN y solo en la consulta de HK se obtuvo `cn.futu.FutuTraderPhone`. Ante un resultado vacío, consulta primero `source=installed` o busca en la región de tienda real del usuario. No interpretes que una búsqueda regional no la encuentre como que no está instalada. También hay que contrastar por separado 飞书 y la versión internacional Lark, 微信 y 企业微信, y la edición normal frente a 极速版 o la edición de desarrollo.
 
-若 MCP 查询本身不可用，可用固定的 Xcode 命令直接读取本地安装列表（`--include-all-apps` 必须保留：devicectl 默认仅显示开发应用），在本地过滤目标名称/bundle ID 后启动。下一步所需观察也可顺带判断启动状态。文件写到仓库外私有目录，不保存完整安装清单到项目：
+Si la propia consulta MCP no está disponible, se puede leer la lista de instalación local con el comando fijo de Xcode (`--include-all-apps` tiene que conservarse: devicectl, por defecto, solo muestra apps de desarrollo), filtrar en local el nombre o el bundle ID de destino y lanzar. La observación que el paso siguiente necesite también puede juzgar de paso el estado del arranque. Escribe el archivo en un directorio privado fuera del repositorio; no guardes el inventario de instalación completo en el proyecto:
 
 ```sh
-xcrun devicectl device info apps --device "<已选设备 UDID>" --include-all-apps --json-output "<私有目录>/apps.json" --timeout 8
+xcrun devicectl device info apps --device "<UDID del dispositivo seleccionado>" --include-all-apps --json-output "<directorio privado>/apps.json" --timeout 8
 ```
 
-## 已核验目录
+## Directorio verificado
 
-每条记录的实际 Apple API URL、商店名称、发布者、国家/地区与 UTC 核验时间见 [apps.json](apps.json)。下面只列品牌、bundle ID 和查询地区；商店记录不证明设备安装状态。
+La URL real de la API de Apple, el nombre en la tienda, el editor, el país o la región y la hora de verificación en UTC de cada registro están en [apps.json](apps.json). Aquí solo se listan la marca, el bundle ID y la tienda de verificación. Un registro de tienda no demuestra el estado de instalación en el dispositivo.
 
-| 应用 | bundle ID | 核验商店 |
+| App | bundle ID | Tienda verificada |
 | --- | --- | --- |
 | 微信 | `com.tencent.xin` | [CN](https://apps.apple.com/cn/app/id414478124) |
 | 支付宝 | `com.alipay.iphoneclient` | [CN](https://apps.apple.com/cn/app/id333206289) |

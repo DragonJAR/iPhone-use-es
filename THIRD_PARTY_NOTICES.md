@@ -1,29 +1,33 @@
-# Third-party components
+# Componentes de terceros
 
-The WDA runtime fetches Appium WebDriverAgent 16.14.0 at commit
-`d17782422d55ff1e5e0ceb74eb1fd509cc0c35b6` from
-https://github.com/appium/WebDriverAgent. WDA is BSD licensed; its original
-LICENSE stays in the external checkout. WDA source, builds and signing data
-are not bundled into this plugin.
+El runtime de WDA descarga Appium WebDriverAgent 16.14.0 en el commit
+`d17782422d55ff1e5e0ceb74eb1fd509cc0c35b6` desde
+https://github.com/appium/WebDriverAgent. WDA se distribuye bajo la licencia
+BSD; su LICENSE original permanece en el checkout externo. El código fuente,
+las compilaciones y los datos de firma de WDA no se incluyen en este plugin.
 
-USB forwarding uses appium-ios-device 3.1.24 under Apache-2.0, installed via
-tooling/package-lock.json. The dependency's license remains in node_modules.
-The Python MCP server uses only the Python standard library.
+El reenvío USB usa appium-ios-device 3.1.24 bajo Apache-2.0, instalado desde
+`tooling/package-lock.json`. La licencia de la dependencia permanece en
+`node_modules`. El servidor MCP de Python utiliza únicamente la biblioteca
+estándar de Python.
 
-## Screen widget SDK and bundled browser dependencies
+## SDK del widget de pantalla y dependencias de navegador incluidas
 
-The self-contained `assets/phone-screen.html` is built from `ui/` using the
-pinned `@modelcontextprotocol/ext-apps` 1.7.5 SDK. The package metadata lists
-MIT; its upstream LICENSE describes a transition to Apache-2.0 for new and
-consented contributions, with MIT continuing to cover contributions not yet
-relicensed. That complete upstream notice is retained below. The widget
-implements our own screen, glow and cursor; it does not bundle OpenAI artwork
-or claim OpenAI authorship.
+El archivo autocontenido `assets/phone-screen.html` se compila desde `ui/` con
+el SDK `@modelcontextprotocol/ext-apps` 1.7.5, cuya versión está fijada. Los
+metadatos del paquete indican MIT; su LICENSE upstream describe una transición
+a Apache-2.0 para el código nuevo y las contribuciones con consentimiento, y
+mantiene MIT para las contribuciones que aún no se han relicenciado. El aviso
+upstream completo se conserva más abajo. El widget implementa su propia
+pantalla, brillo y cursor; no incluye ilustraciones de OpenAI ni atribuye su
+autoría a OpenAI.
 
-`ui/package-lock.json` records the exact versions used by the build. Original
-license texts for the SDK and its browser dependencies follow, so they remain
-with the packaged HTML even when `node_modules` is excluded from the source
-archive. Legal comments emitted by the bundler are also retained inline.
+`ui/package-lock.json` registra las versiones exactas usadas en la
+compilación. A continuación se incluyen los textos originales de las licencias
+del SDK y de sus dependencias de navegador, para que acompañen al HTML
+empaquetado aunque `node_modules` se excluya del archivo de código fuente. Los
+comentarios legales que añade el empaquetador también se conservan dentro del
+HTML.
 
 ### @modelcontextprotocol/ext-apps 1.7.5
 

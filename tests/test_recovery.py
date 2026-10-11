@@ -98,7 +98,7 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(result["recovery"]["state"], "disabled")
         self.assertEqual(result["recovery"]["next_tool"], "pua_ready")
         self.assertEqual(result["recovery"]["next_arguments"], {"screenshot": False, "recover": True})
-        self.assertIn("user", result["recovery"]["permission_note"].lower())
+        self.assertIn("persona", result["recovery"]["permission_note"].lower())
         self.manager.recover.assert_not_called()
         self.assert_no_phone_mutation()
 

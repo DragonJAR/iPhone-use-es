@@ -1,37 +1,37 @@
-# 在关键结果验收
+# Comprobar el resultado crítico
 
-常规动作默认乐观执行，不专门插入一次观察来验证上一动作。准备下一步需要页面信息时，复用该次观察顺带判断进度；明确未生效再调整或重做。普通 `verified=false` 只表示没有显式验收。`expect`、`verify=true` 和最终回读用于有实际意义的关键结果，不要求每次点击、切页、展开或滚动都验一次。
+Las acciones habituales se ejecutan con optimismo y no se inserta una observación solo para verificar la acción anterior. Cuando preparar el paso siguiente necesita información de la página, reutiliza esa observación y juzga el avance de paso; ajusta o repite solo si está claro que no surtió efecto. Un `verified=false` ordinario solo indica que no hubo comprobación explícita. `expect`, `verify=true` y la relectura final sirven para un resultado crítico que importa de verdad; no hace falta verificar cada toque, cada cambio de página, cada despliegue o cada desplazamiento.
 
-## 列表与详情
+## Lista y detalle
 
-`pua_collect_list` 是页面采集器，不是任意 App 的业务模型。通过任务本就需要的列表读取确认页面和筛选范围，保留第一页 / 最后一页边界、终止原因、去重规则与缺失字段。最终按用户要求对账覆盖范围与条数；无进展、树截断或达到页数上限不等于全量。
+`pua_collect_list` es un recolector de páginas, no el modelo de negocio de una app cualquiera. Confirma la página y el alcance del filtro con la lectura de la lista que la tarea ya necesitaba, y conserva el límite de la primera / última página, el motivo de parada, la regla de deduplicación y los campos que faltan. Al final concilia el alcance cubierto y el número de entradas según lo que pidió el usuario. Que no haya avance, que el árbol esté truncado o que se alcance el límite de páginas no equivale a tener el conjunto completo.
 
-相同名称可能对应不同记录；实际订单号、日期、状态和金额可共同区分记录。工具默认去重可能折叠相同显示的真实记录，需要在最终结论中说明实际缺口。详情打开后直接读取需要的字段，同一次读取足以判断是否在正确详情，不另加一个专门验页面的回合。
+El mismo nombre puede corresponder a registros distintos; el número de pedido, la fecha, el estado y el importe reales pueden distinguirlos juntos. La deduplicación por defecto de la herramienta puede plegar registros reales que se muestran igual, y hay que explicar ese hueco real en la conclusión final. Después de abrir el detalle, lee directamente los campos necesarios; esa misma lectura basta para saber si es el detalle correcto, sin añadir una ronda solo para verificar la página.
 
-固定表头、原生浮层和自绘面板可能遮住树中仍存在的目标。明确的 occluded / offscreen 错误没有执行目标点击；错误已附当前截图，目标可见时直接改用坐标点击，被遮挡时先处理遮挡。截图触发分享层时处理当前层，不循环关闭后立即重复截图，也不宣称插件已实现替代捕获或应用内部导出。
+Una cabecera fija, una capa flotante nativa o un panel dibujado por la app pueden tapar un objetivo que sigue en el árbol. Un error claro de occluded / offscreen no ejecutó el toque sobre el objetivo. El error ya adjunta la captura actual: si el objetivo se ve, pasa directamente a un toque por coordenadas; si está tapado, trata primero la oclusión. Si la captura abre la capa de compartir, trata la capa actual; no cierres y repitas la captura en bucle, ni afirmes que el plugin ya implementa una captura alternativa o una exportación interna de la app.
 
-滚动后目标仍不可点击时先看截图再决定是否继续；`scroll_find` 一次最多滑一次，遮挡 / 歧义立即停止。显式滚动验证第一次无进展、滚动区域被挡、上下文改变或列表采集遇重复页时也附截图。异常结果不受普通 none/tree 输出选项限制，已附图直接复用；无进展本身不是列表到底或采集全量的证明。
+Si después de desplazar el objetivo sigue sin poder pulsarse, mira primero la captura y decide entonces si continúas. `scroll_find` se desliza como máximo una vez por llamada y se detiene de inmediato ante oclusión o ambigüedad. La primera falta de avance de una verificación explícita de desplazamiento, una zona de desplazamiento bloqueada, un cambio de contexto o una página repetida durante la recolección también adjuntan captura. El resultado anómalo no queda limitado por las opciones ordinarias de salida none/tree; si ya hay imagen, reutilízala. La falta de avance, por sí sola, no demuestra que la lista haya llegado al final ni que la recolección sea completa.
 
-## 时效与汇总
+## Vigencia y totales
 
-对异步刷新，只在任务所需内容尚未加载时等待；读取实际字段，记录页面提供的估值、净值或成交日期。当天打开 App 不代表数据属于当天。
+Ante un refresco asíncrono, espera solo mientras el contenido que la tarea necesita aún no se ha cargado. Lee los campos reales y anota la valoración, el valor liquidativo o la fecha de ejecución que muestra la página. Abrir la app hoy no significa que los datos sean de hoy.
 
-跨账户 / 币种分别记录，原币明细和账户总额避免重复相加。“待确认”“实扣成功”“份额已确认”是不同业务阶段，最终按用户要求定义成功。现金、持仓、在途和未知账户保持归属，无法对账的差额保留未知。PUA 不负责估值、汇率换算或定义净资产。
+Anota por separado cuentas y divisas; no sumes dos veces el detalle en moneda original y el total de la cuenta. «待确认», «实扣成功» y «份额已确认» son fases de negocio distintas; el éxito final se define según lo que pidió el usuario. El efectivo, las posiciones, lo que está en tránsito y las cuentas desconocidas conservan su pertenencia, y una diferencia que no se pueda conciliar se deja como desconocida. PUA no valora, no convierte divisas ni define el patrimonio neto.
 
-写到外部数据库前，使用该服务连接器核对字段类型和含义；完成写入后一次回读关键目标、正文、字段与重复条数即可验收最终交付。插件提供 iPhone UI 能力，没有通用 Notion / 文档 API。
+Antes de escribir en una base de datos externa, contrasta con el conector de ese servicio el tipo y el significado de los campos. Tras escribir, una relectura de los objetivos críticos, el cuerpo, los campos y el número de duplicados basta para aceptar la entrega final. El plugin ofrece capacidad de interfaz del iPhone; no tiene una API genérica de Notion ni de documentos.
 
-## 输入与提交
+## Escritura y envío
 
-直接输入任务需要的完整内容，不先写短中文 / ASCII 试验。正常搜索、筛选或编辑不用逐步回读；下一步需要查看页面时顺带判断输入和导航是否生效。仅在调试已确认的输入问题时使用合成文本，不使用用户的真实资产或账户信息做测试。
+Escribe de una vez el contenido completo que la tarea necesita; no empieces con un ensayo corto en chino o en ASCII. Una búsqueda, un filtro o una edición normales no se releen paso a paso. Cuando el paso siguiente necesite ver la página, juzga de paso si la escritura y la navegación surtieron efecto. Usa texto sintético solo para depurar un problema de escritura ya confirmado, y no uses como prueba el patrimonio ni los datos de cuenta reales del usuario.
 
-关键最终草稿可用 `pua_type_text(verify=true)` 精确回读，或用发送前本就需要的观察核对收件位置与完整内容。确认内容之后发送一次，最终以消息 / 记录 / 结果页核对内容、位置和重复条数。多行编辑需要明确合适的 TextView，允许换行不等于允许发送。
+El borrador final crítico puede releerse con exactitud mediante `pua_type_text(verify=true)`, o contrastarse con la observación que ya hacía falta antes de enviar: destinatario y contenido completo. Después de confirmar el contenido, envía una sola vez y comprueba al final, en el mensaje, el registro o la página de resultado, el contenido, el lugar y el número de duplicados. Una edición multilínea exige un TextView que se sepa adecuado; permitir saltos de línea no es permitir el envío.
 
-如果明确出现乱码、部分发送、timeout、uncertain 或动作部分完成，先读取真实字段 / 会话 / 提交记录，再执行未完成部分；不能盲目重新输入或补发。工具接受了请求不证明业务成功，但正常动作也不要求逐次停下；最终结论应有关键结果证据。密码、解锁码和验证码交给用户在手机输入。
+Si aparece con claridad texto corrupto, un envío parcial, timeout, uncertain o una acción completada solo en parte, lee primero el campo, la sesión o el registro de envío reales y después ejecuta la parte que falte. No vuelvas a escribir ni reenvíes a ciegas. Que la herramienta haya aceptado la petición no demuestra el éxito de negocio, pero una acción normal tampoco obliga a detenerse en cada paso. La conclusión final debe tener evidencia del resultado crítico. La contraseña, el código de desbloqueo y el código de verificación los escribe el usuario en el teléfono.
 
-输入回读不符或预期页面没出现时附当前截图，先判断焦点、实际文本、弹窗和提交结果，再补未完成部分。截图失败保留原错误与执行证据，缺图时单独读取一次，不自行继续输入或提交。
+Si la relectura de lo escrito no coincide, o no aparece la página esperada, adjunta la captura actual y juzga primero el foco, el texto real, el diálogo y el resultado del envío; después completa solo lo que falte. Si la captura falla, conserva el error original y la evidencia de ejecución; si falta la imagen, haz una lectura aparte y no sigas escribiendo o enviando por tu cuenta.
 
-## 计时与可追溯性
+## Tiempo y trazabilidad
 
-observation ID 与截图可连接必要动作和观察；默认保留最近 100 张图片，关键验收证据在清理前保存到用户指定的本机目录。XML 与参数没有自动保存为完整轨迹，metrics 仅在当前进程保留有界请求 / 工具计时，不包含输入文本与业务值。用户要求完整轨迹时，只在本机保存必要证据并排除 Git。
+El observation ID y la captura pueden unir la acción y la observación necesarias. Por defecto se conservan las 100 imágenes más recientes; la evidencia crítica de aceptación se guarda, antes de limpiarla, en el directorio local que indique el usuario. El XML y los parámetros no se guardan solos como una traza completa. metrics solo conserva en el proceso actual un cómputo acotado de peticiones y herramientas, y no incluye el texto escrito ni valores de negocio. Si el usuario pide la traza completa, guarda en local solo la evidencia necesaria y exclúyela de Git.
 
-分别记录首次部署、功能诊断、业务任务与报告生成。HTTP 耗时、UI 动作数、工具调用数和任务墙钟是不同口径；没有相应计时不能把所有间隔归为模型思考。评价优化时同时看实际端到端耗时与最终交付完整度。
+Anota por separado el primer despliegue, el diagnóstico funcional, la tarea de negocio y la generación del informe. El tiempo HTTP, el número de acciones de interfaz, el número de llamadas a herramientas y el reloj de pared de la tarea son medidas distintas. Sin el cómputo correspondiente, no atribuyas todos los intervalos a la reflexión del modelo. Al valorar una optimización, mira a la vez el tiempo real de extremo a extremo y lo completo de la entrega final.

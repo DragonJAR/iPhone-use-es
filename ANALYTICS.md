@@ -1,100 +1,121 @@
-# iPhone Use analytics
+# Analítica de iPhone Use
 
-PostHog organization: `iPhone-use`. Project: `653022` (US Cloud).
-Project time zone: `Asia/Shanghai`.
-[Usage and reliability dashboard](https://us.posthog.com/project/653022/dashboard/2185876).
+Organización de PostHog: `iPhone-use`. Proyecto: `653022` (nube de EE. UU.).
+Zona horaria del proyecto: `Asia/Shanghai`.
+[Panel de uso y fiabilidad](https://us.posthog.com/project/653022/dashboard/2185876).
 
-This follows Cowart's server-side delivery approach, with a Python standard-library
-client in `server/analytics.py`. The write-only project token in
-`server/posthog.json` ships with the plugin; a personal API key is never required
-for capture. See the [PostHog capture API](https://posthog.com/docs/api/capture).
+El envío del lado del servidor sigue el enfoque de Cowart y usa un cliente de la
+biblioteca estándar de Python en `server/analytics.py`. El token del proyecto,
+que solo permite escribir, está en `server/posthog.json` y se incluye con el
+plugin; no hace falta una clave API personal para enviar eventos. Consulta la
+[API de captura de PostHog](https://posthog.com/docs/api/capture).
 
-## Collection and controls
+## Recopilación y controles
 
-Analytics is enabled by default. It records a random installation UUID saved
-privately in the plugin's state directory, a new random process/session UUID,
-plugin version, platform, event timestamp and the bounded fields below. The
-installation UUID remains stable through upgrades that reuse the state directory.
-It represents an installation, not a known person, phone or chat. There are no
-person profiles, automatic frontend capture, phone recordings or GeoIP enrichment.
+La analítica está habilitada de forma predeterminada. Registra un UUID de
+instalación aleatorio guardado en privado en el directorio de estado del plugin,
+un UUID aleatorio nuevo para cada proceso o sesión, la versión del plugin, la
+plataforma, la hora del evento y los campos acotados descritos abajo. El UUID de
+instalación se mantiene estable entre actualizaciones que reutilizan ese
+directorio. Identifica una instalación, no a una persona, un teléfono ni un
+chat. No hay perfiles de personas, captura automática del frontend,
+grabaciones del teléfono ni enriquecimiento de GeoIP.
 
-Phone text, selectors, accessibility trees, screenshots, clipboard data, app
-bundle IDs, UDIDs, signing teams, filesystem paths, MCP request IDs and exception
-messages are never sent. Only known tools, actions, states and error codes are
-accepted; unknown errors become `other`.
+Nunca se envían texto del teléfono, selectores, árboles de accesibilidad,
+capturas, datos del portapapeles, bundle IDs de apps, UDID, equipos de firma,
+rutas del sistema de archivos, IDs de solicitudes MCP ni mensajes de excepción.
+Solo se aceptan herramientas, acciones, estados y códigos de error conocidos;
+los errores desconocidos se convierten en `other`.
 
-Set either environment variable on the MCP server and restart it to disable
-analytics completely, including local analytics identity creation:
+Configura cualquiera de estas variables de entorno en el servidor MCP y
+reinícialo para desactivar toda la analítica, incluida la creación de la
+identidad analítica local:
 
 ```sh
 IPHONE_USE_ANALYTICS=0
-# Or:
+# O bien:
 DO_NOT_TRACK=1
 ```
 
-For Codex, add `IPHONE_USE_ANALYTICS = "0"` under
-`[mcp_servers.iphone_use.env]` in `~/.codex/config.toml`. For a portable MCP JSON
-configuration, add `"env": {"IPHONE_USE_ANALYTICS": "0"}` to the server entry.
+En Codex, añade `IPHONE_USE_ANALYTICS = "0"` en
+`[mcp_servers.iphone_use.env]` dentro de `~/.codex/config.toml`. En una
+configuración MCP JSON portátil, añade `"env": {"IPHONE_USE_ANALYTICS": "0"}`
+a la entrada del servidor.
 
-`IPHONE_USE_POSTHOG_PROJECT_TOKEN` overrides the bundled token. An explicitly
-empty value disables sending. For local development, `server/posthog.local.json`
-may contain `{"projectToken":"your-write-only-project-token"}`; this file is
-ignored by Git and excluded from both install and source packages. Precedence:
-environment override, local config, bundled config. Capture always uses US Cloud.
+`IPHONE_USE_POSTHOG_PROJECT_TOKEN` reemplaza el token incluido. Un valor vacío
+explícito desactiva el envío. Para desarrollo local,
+`server/posthog.local.json` puede contener
+`{"projectToken":"your-write-only-project-token"}`; Git ignora este archivo y
+se excluye de los paquetes de instalación y de código fuente. Orden de
+precedencia: variable de entorno, configuración local y configuración incluida.
+La captura siempre usa la nube de EE. UU.
 
-`IPHONE_USE_ANALYTICS_ENV` accepts `production` (default), `development` or `test`.
-The dashboard only counts `production`. `sh scripts/check.sh` disables telemetry
-for tests and subprocess package checks; analytics unit tests inject fake senders.
-Run standalone test commands with `IPHONE_USE_ANALYTICS=0` as well.
+`IPHONE_USE_ANALYTICS_ENV` acepta `production` (predeterminado), `development`
+o `test`. El panel cuenta únicamente eventos `production`. `sh scripts/check.sh`
+desactiva la telemetría para las pruebas y los subprocesos de validación del
+paquete; las pruebas unitarias de analítica inyectan remitentes ficticios.
+También desactiva la analítica al ejecutar pruebas independientes.
 
-## Events
+## Eventos
 
-| Event | When | Bounded properties |
+| Evento | Cuándo | Propiedades acotadas |
 | --- | --- | --- |
-| `iphone_use_session_started` | Once per MCP process, on initialize or first tracked Runtime call | Common properties only |
-| `iphone_use_tool_called` | After a known tool finishes or raises, for MCP and direct Runtime/CLI calls | `tool_name`, `outcome`, `error_code`, `duration_ms`; `batch_size` for batches |
-| `iphone_use_ready_result` | Each READY check | Tool fields plus `ready_state` |
-| `iphone_use_setup_result` | Each setup call | Tool fields plus `setup_action`, `setup_state` |
-| `iphone_use_screen_action` | Preview open/pause/resume and toolbar actions | Tool fields plus `screen_action` |
+| `iphone_use_session_started` | Una vez por proceso MCP, al inicializarse o en la primera llamada de Runtime con seguimiento | Solo propiedades comunes |
+| `iphone_use_tool_called` | Cuando termina o falla una herramienta conocida, en MCP y en llamadas directas a Runtime o CLI | `tool_name`, `outcome`, `error_code`, `duration_ms`; `batch_size` para lotes |
+| `iphone_use_ready_result` | En cada comprobación READY | Campos de la herramienta y `ready_state` |
+| `iphone_use_setup_result` | En cada llamada de setup | Campos de la herramienta y `setup_action`, `setup_state` |
+| `iphone_use_screen_action` | Al abrir, pausar o reanudar la vista previa y al usar sus controles | Campos de la herramienta y `screen_action` |
 
-`pua_screen_frame` polling is excluded entirely. Dedicated result events are not
-additional tool calls: usage and failure charts count only
-`iphone_use_tool_called`. Batch substeps are not double-counted.
+Se excluye por completo el sondeo de `pua_screen_frame`. Los eventos de
+resultado específicos no se cuentan como llamadas adicionales: los gráficos
+de uso y errores solo cuentan `iphone_use_tool_called`. Los pasos de un batch
+no se cuentan dos veces.
 
-`success` means the tool returned without an error or an explicit incomplete
-result. It does not promise that a user task was completed or independently
-verified. READY false, incomplete input/batches and queued/running setup jobs
-are `pending`; raised errors and explicit failed results are `error`. Setup
-events track submission/status calls, not autonomous worker completion.
+`success` significa que la herramienta terminó sin error ni resultado
+explícitamente incompleto. No significa que se haya completado o verificado de
+forma independiente una tarea de la persona usuaria. Un resultado READY falso,
+una entrada o lote incompleto y los trabajos de setup en cola o en curso se
+marcan como `pending`; las excepciones y los resultados explícitamente fallidos
+se marcan como `error`. Los eventos de setup registran las llamadas de envío o
+consulta de estado, no la finalización autónoma del trabajo.
 
-Durations are in milliseconds, from Runtime entry through return/error. They
-include the phone operation lock and execution, exclude MCP worker queue waiting,
-response serialization and analytics delivery. Duration is capped at one hour,
-batch size at 20. Arbitrary argument and result objects are never serialized.
+Las duraciones se miden en milisegundos, desde la entrada en Runtime hasta que
+termina o devuelve un error. Incluyen la espera por el bloqueo de operaciones
+del teléfono y su ejecución, pero excluyen la cola del worker MCP, la
+serialización de la respuesta y el envío de analítica. La duración se limita a
+una hora y el tamaño de batch, a 20. Nunca se serializan objetos arbitrarios de
+argumentos o resultados.
 
-## Dashboard definitions
+## Definiciones del panel
 
-The eight native PostHog trend insights cover daily active installations, MCP
-starts, tool usage, READY results, tool failure rate, average/P95 latency, error
-categories and setup actions. The exact queries are preserved in
-`scripts/posthog-dashboard.json` in the source package.
+Los ocho gráficos nativos de tendencias de PostHog muestran instalaciones
+activas al día, inicios de MCP, uso de herramientas, resultados READY, tasa de
+fallos de herramientas, latencia media y P95, categorías de error y acciones de
+setup. Las consultas exactas se conservan en `scripts/posthog-dashboard.json`
+del paquete de código fuente.
 
-Active installations are distinct random installation IDs with a successful
-task tool or READY call, excluding doctor, setup, metrics and preview controls.
-MCP starts count processes, not conversations. Failure rate includes pending
-calls in its denominator; a displayed zero on a day with no calls is not evidence
-of reliability. The dashboard is empty until production events arrive. Test and
-development events remain available in Activity but are excluded from these
-charts. These are project-specific definitions, not team-approved Data Catalog
-metrics.
+Las instalaciones activas son IDs de instalación aleatorios distintos que
+realizan una llamada correcta a una herramienta de tarea o a READY; se excluyen
+doctor, setup, metrics y los controles de vista previa. Los inicios de MCP
+cuentan procesos, no conversaciones. La tasa de errores incluye las llamadas
+`pending` en el denominador; un cero en un día sin llamadas no demuestra
+fiabilidad. El panel permanece vacío hasta que llegan eventos de producción.
+Los eventos de prueba y desarrollo siguen disponibles en Activity, pero no se
+incluyen en estos gráficos. Son definiciones específicas de este proyecto, no
+métricas aprobadas por el Data Catalog del equipo.
 
-## Delivery limits
+## Límites de envío
 
-Capture queues bounded events in memory on a daemon worker, at most 256 waiting
-events and 20 events per request. Each event has a random UUID; one retry for a
-network failure, HTTP 429 or HTTP 5xx reuses the same payload and UUID. Ordinary
-4xx errors are not retried. Requests have a three-second socket timeout, and
-shutdown waits at most 1.5 seconds. No events are written to disk for replay.
-Queue overflow, extended outages or an immediate process exit can drop events;
-this is usage telemetry, not an audit trail. Analytics failures never change
-phone results, replay phone operations or write to MCP stdout.
+La captura mantiene en memoria una cola acotada de eventos en un worker de
+fondo: admite como máximo 256 eventos en espera y 20 por solicitud. Cada evento
+tiene un UUID aleatorio; ante un fallo de red, HTTP 429 o HTTP 5xx, se reintenta
+una vez con el mismo payload y UUID. Los errores HTTP 4xx normales no se
+reintentan. Las solicitudes tienen un timeout de socket de tres segundos y el
+cierre espera como máximo 1,5 segundos. No se guardan eventos en disco para
+reenviarlos después.
+
+El desbordamiento de la cola, las interrupciones prolongadas del servicio o el
+cierre inmediato del proceso pueden hacer que se pierdan eventos. Estas
+métricas de uso no son un registro de auditoría. Los fallos de analítica nunca
+cambian los resultados del teléfono, repiten operaciones ni escriben en la
+salida estándar de MCP.

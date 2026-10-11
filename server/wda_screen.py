@@ -329,7 +329,7 @@ class ScreenHub:
 
     def set_paused(self, paused, reason="authentication"):
         if reason not in ("authentication", "device_locked"):
-            raise ValueError("Unknown preview pause reason")
+            raise ValueError("Motivo de pausa de la vista previa desconocido")
         with self._state_transaction() as state:
             # A lock error cannot weaken an explicit or legacy authentication pause.
             if not (paused and reason == "device_locked" and state["paused"]

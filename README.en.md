@@ -1,6 +1,6 @@
 # iPhone Use
 
-[中文](README.md) · **English**
+[Español](README.md) · **English**
 
 ![iPhone Use controlling a real iPhone in Codex with a live screen preview](assets/iphone-use-demo.png)
 
@@ -18,11 +18,12 @@ Paste this prompt into Codex running on your Mac:
 
 ```text
 Install and configure iPhone Use for me:
-https://github.com/zhongerxin/iPhone-use
+https://github.com/DragonJAR/iPhone-use-es
 
 Read the repository README and installation script first. Check Codex CLI,
 Python, Node.js, npm, full Xcode, and the iPhone connected over USB.
-Clone the project into a suitable local directory and run sh scripts/install.sh.
+Clone the project into a local `iPhone-use-es` directory, enter it, and run
+`sh scripts/install.sh`.
 
 If this chat cannot load the new tools, tell me to reconnect or start a new chat
 and continue there. Once tools are available, read the iphone-use-setup skill.
@@ -37,7 +38,7 @@ Developer Mode, or unlocking needs my input, explain the exact steps and wait
 for me to complete them before continuing.
 ```
 
-A reconnect may be required to load newly installed tools. Apple account login, device trust, Developer Mode, and unlocking must be completed by the device owner in the system UI. The repository is currently private; GitHub access or a source package is required.
+A reconnect may be required to load newly installed tools. Apple account login, device trust, Developer Mode, and unlocking must be completed by the device owner in the system UI.
 
 ## Requirements
 
@@ -64,13 +65,13 @@ For manual Xcode setup:
 2. Open `WebDriverAgent.xcodeproj`, select the `WebDriverAgentRunner` scheme and your iPhone, and configure your Team and a signable Bundle Identifier in the Runner target's **Signing & Capabilities**.
 3. Use **Product → Test** to build, install, and start the runner. Complete any trust prompts on the phone. The WDA service must remain running.
 
-After installing the plugin and configuring USB connectivity, start phone tasks only when `pua_ready` returns `ready=true`. See [Appium's device preparation guide](https://appium.github.io/appium-xcuitest-driver/latest/getting-started/device-setup/) for device and signing requirements.
+On first use in a chat, call `pua_setup(action="status")` first to reuse a healthy service or active job; call `start` only once and only if the service is missing. `start` waits up to 20 seconds by default. If it times out, query the same `job` and do not start again. Once the service is ready, verify `pua_ready` returns `ready=true` before using the phone. See [Appium's device preparation guide](https://appium.github.io/appium-xcuitest-driver/latest/getting-started/device-setup/) for device and signing requirements.
 
 ## Install and connect
 
 ```sh
-git clone https://github.com/zhongerxin/iPhone-use.git
-cd iPhone-use
+git clone https://github.com/DragonJAR/iPhone-use-es.git
+cd iPhone-use-es
 sh scripts/install.sh
 ```
 
@@ -164,6 +165,8 @@ python3 scripts/package.py
 The UI builds into self-contained HTML. Source packages are written to `dist/iphone-use-<version>-source.zip`; normal installation and use do not require rebuilding the UI. Installed plugins retain the complete widget source, styles, build scripts, configuration, dependency lockfile, and widget tests for local maintenance.
 
 See [screen preview and recovery](skills/iphone-use/references/screen.md), [app identifiers](skills/iphone-use/references/apps.md), [troubleshooting](skills/iphone-use-setup/references/troubleshooting.md), and [changelog](CHANGELOG.md).
+
+Note: The linked skills, analytics documentation, and changelog are currently available only in Spanish.
 
 ## Dependencies and acknowledgements
 

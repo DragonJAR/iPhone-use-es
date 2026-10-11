@@ -1,12 +1,12 @@
 {
   "projectId": 653022,
   "dashboardId": 2185876,
-  "name": "iPhone-use｜使用与稳定性",
+  "name": "iPhone Use｜Uso y estabilidad",
   "timezone": "Asia/Shanghai",
   "insights": [
     {
-      "name": "01｜每日活跃安装",
-      "description": "每日成功调用任务工具或 READY 的匿名安装数；排除诊断、setup、metrics 和预览控制。安装数不等于真实人数。",
+      "name": "01｜Instalaciones activas al día",
+      "description": "Instalaciones anónimas que cada día llaman con éxito a una herramienta de tarea o a READY; excluye diagnóstico, setup, metrics y el control de la vista previa. El número de instalaciones no es el de personas.",
       "query": {
         "kind": "TrendsQuery",
         "dateRange": {
@@ -56,8 +56,8 @@
       }
     },
     {
-      "name": "02｜每日 MCP 启动",
-      "description": "每日 MCP 进程首次 initialize 或首次工具调用的次数；重启会产生新启动，非聊天会话数。",
+      "name": "02｜Arranques MCP al día",
+      "description": "Veces al día en que un proceso MCP hace el primer initialize o la primera llamada a una herramienta; un reinicio cuenta como un arranque nuevo, no como una sesión de chat.",
       "query": {
         "kind": "TrendsQuery",
         "dateRange": {
@@ -86,8 +86,8 @@
       }
     },
     {
-      "name": "03｜工具使用分布",
-      "description": "按工具名统计调用次数，包括成功、等待和失败；屏幕帧轮询不计入。batch 计为一次调用。",
+      "name": "03｜Distribución de uso de herramientas",
+      "description": "Llamadas por nombre de herramienta, con éxito, espera y error; el sondeo de fotogramas no cuenta. batch cuenta como una llamada.",
       "query": {
         "kind": "TrendsQuery",
         "dateRange": {
@@ -127,8 +127,8 @@
       }
     },
     {
-      "name": "04｜READY 连接结果",
-      "description": "按 ready/recovering/recovery_required/not_ready/error 查看连接检查结果，待恢复不视为成功。",
+      "name": "04｜Resultado de la conexión READY",
+      "description": "Resultado de la comprobación de conexión según ready, recovering, recovery_required, not_ready o error. Un estado pendiente de recuperación no cuenta como éxito.",
       "query": {
         "kind": "TrendsQuery",
         "dateRange": {
@@ -168,8 +168,8 @@
       }
     },
     {
-      "name": "05｜工具调用失败率",
-      "description": "每日 outcome=error 的调用数 / 全部调用数。pending 纳入分母，画面轮询排除；无调用日期显示的 0 不代表稳定性。",
+      "name": "05｜Tasa de fallos de herramientas",
+      "description": "Llamadas al día con outcome=error / todas las llamadas. pending entra en el denominador y el sondeo de imagen se excluye; un 0 en un día sin llamadas no indica estabilidad.",
       "query": {
         "kind": "TrendsQuery",
         "dateRange": {
@@ -214,7 +214,7 @@
           "formulaNodes": [
             {
               "formula": "A/B",
-              "custom_name": "失败率"
+              "custom_name": "Tasa de fallos"
             }
           ],
           "aggregationAxisFormat": "percentage_scaled"
@@ -222,8 +222,8 @@
       }
     },
     {
-      "name": "06｜各工具耗时",
-      "description": "按工具名展示平均与 P95 耗时（毫秒），计入运行锁等待，不含 PostHog 网络发送与 MCP 排队时间。",
+      "name": "06｜Duración por herramienta",
+      "description": "Media y P95 en milisegundos por nombre de herramienta, incluida la espera del bloqueo de ejecución, sin el envío de red a PostHog ni la cola de MCP.",
       "query": {
         "kind": "TrendsQuery",
         "dateRange": {
@@ -248,7 +248,7 @@
             "math": "avg",
             "properties": [],
             "math_property": "duration_ms",
-            "custom_name": "平均耗时"
+            "custom_name": "Duración media"
           },
           {
             "kind": "EventsNode",
@@ -256,7 +256,7 @@
             "math": "p95",
             "properties": [],
             "math_property": "duration_ms",
-            "custom_name": "P95 耗时"
+            "custom_name": "Duración P95"
           }
         ],
         "breakdownFilter": {
@@ -274,8 +274,8 @@
       }
     },
     {
-      "name": "07｜调用错误类别",
-      "description": "失败调用按允许的 error_code 汇总。未列入白名单的错误归为 other，不上传错误消息。",
+      "name": "07｜Categorías de error",
+      "description": "Llamadas fallidas agrupadas por los error_code permitidos. Los errores fuera de la lista quedan en other y no se sube el mensaje de error.",
       "query": {
         "kind": "TrendsQuery",
         "dateRange": {
@@ -324,8 +324,8 @@
       }
     },
     {
-      "name": "08｜配置与启动操作",
-      "description": "pua_setup 调用按 action 与 outcome 分布。queued/running 只表示任务提交或等待，不代表后台构建或启动已完成。",
+      "name": "08｜Configuración y arranque",
+      "description": "Llamadas a pua_setup según action y outcome. queued o running solo indican que el trabajo se envió o espera; no que la compilación o el arranque en segundo plano hayan terminado.",
       "query": {
         "kind": "TrendsQuery",
         "dateRange": {
